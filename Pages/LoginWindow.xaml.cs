@@ -1,5 +1,6 @@
 using System.Windows;
-using MonitoringApp.Pages;
+using System.Windows.Input;
+using MonitoringApp.Pages; // Pastikan ini sesuai dengan namespace MainWindow Anda
 
 namespace MonitoringApp
 {
@@ -8,23 +9,38 @@ namespace MonitoringApp
         public LoginWindow()
         {
             InitializeComponent();
+
+            // Logika agar window bisa digeser (drag) saat diklik kiri
+            this.MouseLeftButtonDown += (sender, e) =>
+            {
+                if (e.ButtonState == MouseButtonState.Pressed)
+                {
+                    this.DragMove();
+                }
+            };
         }
 
         private void Login_Click(object sender, RoutedEventArgs e)
         {
-            // Sederhana: cek username dan password
+            // Cek username dan password
             if (txtUsername.Text == "user" && txtPassword.Password == "123")
             {
-                // Jika login berhasil
-                var mainWin = new MainWindow(); // masuk ke dashboard
+                // Buka MainWindow (Dashboard)
+                var mainWin = new MainWindow(); 
                 mainWin.Show();
                 
-                this.Close(); // Tutup login window
+                // Tutup Login Window
+                this.Close(); 
             }
             else
             {
-                MessageBox.Show("Invalid username or password!");
+                MessageBox.Show("Username atau Password salah!", "Login Gagal", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
         }
     }
 }

@@ -5,10 +5,17 @@ namespace MonitoringApp.ViewModels
     // Warisi ViewModelBase
     public class MachineDetailViewModel : ViewModelBase
     {
-        // Properti Identitas (biasanya tidak berubah sering)
+        public int Id { get; set; }
         public string Line { get; set; }
         public string Name { get; set; }
         public string Process { get; set; }
+
+        private string _remark;
+        public string Remark
+        {
+            get => _remark;
+            set { if (_remark != value) { _remark = value; OnPropertyChanged(); } }
+        }
 
         private string _lastUpdate;
         public string LastUpdate

@@ -1,7 +1,7 @@
 using MonitoringApp.ViewModels;       // Pastikan LineSummary ada di sini
 using MonitoringApp.Models;       // Pastikan LineSummary ada di sini
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 
 namespace MonitoringApp.Services
 {
@@ -83,17 +83,22 @@ namespace MonitoringApp.Services
         public List<MachineDetailViewModel> GetMachineDetailByLine(string lineProduction)
         {
             var result = new List<MachineDetailViewModel>();
-            var tempList = new List<(int Id, string lineName, string name, string process, string lastUpdate, double partHours, double cycle, double avgCycle, int nilaiA0)>();
+
+            // 1. PERBAIKAN DISINI: Tambahkan 'string remark' ke dalam definisi Tuple
+            var tempList = new List<(int Id, string lineName, string name, string process, string lastUpdate, double partHours, double cycle, double avgCycle, int nilaiA0, string remark)>();
+
             using (var conn = _db.GetConnection())
             {
                 conn.Open();
-                // Query utama: join data_realtime dan line
+                // 2. Query mengambil kolom 'remark'
                 var cmd = new SqlCommand(@"
-                    SELECT dr.*, l.line_production, l.process, l.name, l.id
-                    FROM data_realtime dr
-                    INNER JOIN line l ON l.id = dr.id
-                    WHERE l.line_production = @line", conn);
+            SELECT dr.*, l.line_production, l.process, l.name, l.id, l.remark
+            FROM data_realtime dr
+            INNER JOIN line l ON l.id = dr.id
+            WHERE l.line_production = @line", conn);
+
                 cmd.Parameters.AddWithValue("@line", lineProduction);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
@@ -102,31 +107,46 @@ namespace MonitoringApp.Services
                         var lineName = reader["line_production"].ToString();
                         var process = reader["process"].ToString();
                         var name = reader["name"].ToString();
+
+                        // 3. Ambil data Remark dari database
+                        var remark = reader["remark"] != DBNull.Value ? reader["remark"].ToString() : "-";
+
                         string lastUpdate = "";
-                        try {
+                        try
+                        {
                             int idx = reader.GetOrdinal("last_update");
                             if (!reader.IsDBNull(idx))
                                 lastUpdate = ((DateTime)reader.GetValue(idx)).ToString("yyyy-MM-dd HH:mm:ss");
-                        } catch {}
+                        }
+                        catch { }
+
                         var partHours = reader["Parthours"] != DBNull.Value ? Convert.ToDouble(reader["Parthours"]) : 0;
                         var cycle = reader["DurasiTerakhirA4"] != DBNull.Value ? Convert.ToDouble(reader["DurasiTerakhirA4"]) : 0;
                         var avgCycle = reader["RatarataTerakhirA4"] != DBNull.Value ? Convert.ToDouble(reader["RatarataTerakhirA4"]) : 0;
                         var nilaiA0 = reader["NilaiA0"] != DBNull.Value ? Convert.ToInt32(reader["NilaiA0"]) : 0;
-                        
-                        tempList.Add((Id, lineName, name, process, lastUpdate, partHours, cycle, avgCycle, nilaiA0));
+
+                        // 4. Masukkan 'remark' ke dalam list sementara
+                        tempList.Add((Id, lineName, name, process, lastUpdate, partHours, cycle, avgCycle, nilaiA0, remark));
                     }
                 }
-                // Setelah reader utama ditutup, baru ambil data shift
+
+                // Setelah reader utama ditutup, ambil data shift
                 foreach (var item in tempList)
                 {
                     var shift1 = GetShiftSummary(conn, "shift_1", item.Id);
                     var shift2 = GetShiftSummary(conn, "shift_2", item.Id);
                     var shift3 = GetShiftSummary(conn, "shift_3", item.Id);
+
                     result.Add(new MachineDetailViewModel
                     {
+                        Id = item.Id, // Pastikan ID juga dipapping
                         Line = item.lineName,
                         Name = item.name,
                         Process = item.process,
+
+                        // 5. Masukkan ke ViewModel
+                        Remark = item.remark,
+
                         LastUpdate = item.lastUpdate,
                         PartHours = item.partHours,
                         Cycle = item.cycle,

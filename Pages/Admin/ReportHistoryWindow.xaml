@@ -1,0 +1,115 @@
+<Window x:Class="MonitoringApp.Pages.ReportHistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Report History Explorer" Height="600" Width="900"
+        WindowStartupLocation="CenterScreen" Background="#F3F4F6">
+
+    <Window.Resources>
+        <Style x:Key="FolderItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#EFF6FF"/>
+                                <Setter Property="BorderBrush" Value="#3B82F6"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#F9FAFB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Report History Logs" FontSize="22" FontWeight="Bold" Foreground="#111827"/>
+            <TextBlock Text="Browse and open daily Excel reports." Foreground="#6B7280" FontSize="13" Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/> <ColumnDefinition Width="20"/>  <ColumnDefinition Width="*"/>   </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="DATE FOLDERS" FontSize="11" FontWeight="Bold" Foreground="#9CA3AF" Margin="0,0,0,10"/>
+                
+                <ListBox x:Name="ListFolders" Grid.Row="1" 
+                         ItemContainerStyle="{StaticResource FolderItemStyle}"
+                         SelectionChanged="ListFolders_SelectionChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📁" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#374151" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Text="FILES IN SELECTED FOLDER" FontSize="11" FontWeight="Bold" Foreground="#9CA3AF" Margin="0,0,0,10"/>
+
+                <ListBox x:Name="ListFiles" Grid.Row="1" 
+                         MouseDoubleClick="ListFiles_MouseDoubleClick"
+                         Background="White" BorderBrush="#E5E7EB" BorderThickness="1" 
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="240" Margin="10" Background="#F9FAFB" CornerRadius="8" Padding="15" Cursor="Hand" BorderBrush="#E5E7EB" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Icon}" FontSize="24" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#1F2937" TextWrapping="Wrap" TextAlignment="Center"/>
+                                    <TextBlock Text="{Binding Size}" FontSize="11" Foreground="#6B7280" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Button Grid.Row="2" Content="📂 Open in Windows Explorer" Click="BtnOpenExplorer_Click" 
+                        HorizontalAlignment="Right" Margin="0,15,0,0" Padding="15,8"
+                        Background="White" BorderBrush="#D1D5DB"/>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

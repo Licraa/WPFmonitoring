@@ -1,219 +1,328 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using MonitoringApp.Services;
-using MonitoringApp.ViewModels;
 using System.Windows.Media;
+using System.Windows.Threading; // Wajib untuk Timer
+using Microsoft.Data.SqlClient; // Wajib untuk koneksi database
+using MonitoringApp.Services;
 
-namespace MonitoringApp.Pages.Admin
+namespace MonitoringApp.Pages
 {
     public partial class SerialMonitorControl : UserControl
     {
+        // --- Services ---
         private SerialPortService _serialService;
-        private readonly SummaryService _summaryService;
-        private string? _selectedLine;
-        private bool _subscribed = false;
-        private FileSystemWatcher? _logWatcher;
-        private long _logPosition = 0;
-
         private DatabaseService? _dbService;
         private RealtimeDataService? _realtimeService;
         private DataProcessingService _dataProcessingService;
+        private CsvLogService _csvService;
 
-        // existing collections
-        private Dictionary<int, object[]> _lastDataById = new();
-        private Dictionary<int, object[]> _localCache = new();
+        // --- State & Timers ---
+        private DispatcherTimer _clockTimer;
+        private bool _subscribed = false;
 
-        private object[]? _lastData;
-        private int _dataId = 0;
-        private string _serialBuffer = string.Empty;
+        // Variabel untuk melacak pergantian shift
+        private string _lastShiftName = "";
+        private DateTime _lastShiftDate = DateTime.MinValue;
 
-        // logging
+        // --- Logging Paths ---
         private readonly string _logDirectory = "Logs";
         private readonly string _logFile = Path.Combine("Logs", "realtime_debug.log");
 
         public event EventHandler? RequestClose;
 
-        // Default ctor (used by designer / normal creation)
-        public SerialMonitorControl()
+        // Constructor Utama
+        public SerialMonitorControl(SerialPortService? existingService = null)
         {
             InitializeComponent();
-
             EnsureLogDirectory();
 
-            _serialService = new SerialPortService();
+            // 1. Inisialisasi Services
+            _serialService = existingService ?? new SerialPortService();
             _dataProcessingService = new DataProcessingService();
+            _csvService = new CsvLogService(); // Service baru untuk CSV/Excel
 
             InitPorts();
+            InitializeDatabaseServices();
+
+            // 2. Set State Awal Shift
+            var info = _csvService.GetCurrentShiftInfo();
+            _lastShiftName = info.shiftName;
+            _lastShiftDate = info.shiftDate;
+
+            // 3. Inisialisasi Timer (Detik) untuk Shift & Jam
+            _clockTimer = new DispatcherTimer();
+            _clockTimer.Interval = TimeSpan.FromSeconds(1);
+            _clockTimer.Tick += ClockTimer_Tick;
+            _clockTimer.Start();
+
+            // Update Tampilan Awal
+            UpdateShiftDisplay();
 
             this.Loaded += SerialMonitorControl_Loaded;
             this.Unloaded += SerialMonitorControl_Unloaded;
+        }
 
-            // Inisialisasi db dan services — aman: buat _dbService dulu
+        // Konstruktor Default (untuk Designer)
+        public SerialMonitorControl() : this(null) { }
+
+        // ==================================================================
+        // 1. LOGIKA TIMER & SHIFT CHANGE
+        // ==================================================================
+        private void ClockTimer_Tick(object? sender, EventArgs e)
+        {
+            // A. Update Tampilan Jam & Shift di UI
+            UpdateShiftDisplay();
+
+            // B. Cek Pergantian Shift Otomatis
+            var info = _csvService.GetCurrentShiftInfo();
+
+            // Jika nama shift berubah ATAU tanggal shift berubah (pergantian hari)
+            if (info.shiftName != _lastShiftName || info.shiftDate != _lastShiftDate)
+            {
+                LogToUI($"[SYSTEM] Shift Changed: {_lastShiftName} -> {info.shiftName}");
+                LogToUI($"[SYSTEM] Generating Excel Report for {_lastShiftName}...");
+
+                // Simpan state lama untuk diproses
+                string shiftToProcess = _lastShiftName;
+                DateTime dateToProcess = _lastShiftDate;
+
+                // Update tracker ke shift baru
+                _lastShiftName = info.shiftName;
+                _lastShiftDate = info.shiftDate;
+
+                // Jalankan Convert Excel di Background (agar UI tidak macet)
+                Task.Run(() =>
+                {
+                    _csvService.FinalizeExcel(shiftToProcess, dateToProcess);
+                    Application.Current.Dispatcher.Invoke(() => LogToUI($"[SUCCESS] Excel Report Ready: {shiftToProcess}"));
+                });
+            }
+        }
+
+        private void UpdateShiftDisplay()
+        {
+            var info = _csvService.GetCurrentShiftInfo();
+            if (txtCurrentShift != null)
+            {
+                txtCurrentShift.Text = $"{info.shiftName} ({DateTime.Now:HH:mm:ss})";
+            }
+        }
+
+        // ==================================================================
+        // 2. LOGIKA PENERIMAAN DATA & SIMPAN
+        // ==================================================================
+        private void SerialService_DataReceived(object? sender, SerialDataEventArgs e)
+        {
+            // Pisahkan baris jika data masuk bertumpuk
+            var lines = e.Text.Replace("\r\n", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                // 1. Parsing Data (Strict Mode)
+                var result = _dataProcessingService.ProcessRawData(line);
+
+                if (!string.IsNullOrEmpty(result.ErrorMessage))
+                {
+                    // Opsional: Log error parsing jika perlu debugging
+                    // LogToUI($"Parse Error: {result.ErrorMessage}");
+                    continue;
+                }
+
+                if (result.IsValid && !result.IsDuplicate)
+                {
+                    // 2. Simpan Data (SQL & CSV)
+                    SaveToDatabase(result.IdKey, result.ParsedData);
+
+                    // 3. Update Log UI
+                    LogToUI($"Data Saved - ID {result.IdKey}: {string.Join(",", result.ParsedData.Skip(1))}");
+                }
+            }
+        }
+
+        private void SaveToDatabase(int idKey, object[] data)
+        {
+            if (_realtimeService == null)
+            {
+                LogFilteredData($"DB Error: Service not init. ID {idKey} skipped.");
+                return;
+            }
+
+            try
+            {
+                if (data.Length >= 10)
+                {
+                    // Safety Check: Pastikan tidak ada data NULL
+                    for (int i = 0; i < 10; i++)
+                    {
+                        if (data[i] == null) { LogFilteredData($"Data ID {idKey} Index {i} is NULL. Skipped."); return; }
+                    }
+
+                    // A. SIMPAN KE SQL SERVER
+                    _realtimeService.SaveToDatabase(
+                        idKey,
+                        (int)data[1],   // nilaiA0
+                        (int)data[2],   // nilaiTerakhirA2
+                        (float)data[3], // durasiTerakhirA4
+                        (float)data[4], // ratarataTerakhirA4
+                        (int)data[5],   // parthours
+                        (float)data[6], // dataCh1 (Service convert ke Time)
+                        (float)data[7], // uptime (Service convert ke Time)
+                        (int)data[8],   // p_datach1
+                        (int)data[9]    // p_uptime
+                    );
+
+                    // B. SIMPAN KE CSV (Ringan)
+                    // Ambil Metadata Mesin (Nama, Line, Process)
+                    var meta = GetMachineInfoById(idKey);
+
+                    // Hitung status & waktu string
+                    string status = ((int)data[1]) == 1 ? "Active" : "Inactive";
+                    string tsDown = TimeSpan.FromSeconds((float)data[6]).ToString(@"hh\:mm\:ss");
+                    string tsUp = TimeSpan.FromSeconds((float)data[7]).ToString(@"hh\:mm\:ss");
+
+                    _csvService.LogDataToCsv(
+                        id: idKey,
+                        name: meta.Name,
+                        line: meta.Line,
+                        process: meta.Process,
+                        status: status,
+                        count: (int)data[2],
+                        cycle: (float)data[3],
+                        avgCycle: (float)data[4],
+                        partHours: (int)data[5],
+                        downtime: tsDown,
+                        uptime: tsUp
+                    );
+
+                    LogFilteredData($"ID {idKey} saved (SQL+CSV).");
+                }
+                else
+                {
+                    LogFilteredData($"ID {idKey} incomplete data.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogFilteredData($"Save Error ID {idKey}: {ex.Message}");
+            }
+        }
+
+        // Helper: Ambil Nama Mesin dari Database untuk CSV
+        private (string Name, string Line, string Process) GetMachineInfoById(int id)
+        {
+            string name = "Unknown", line = "-", process = "-";
+            try
+            {
+                if (_dbService == null) return (name, line, process);
+                using var conn = _dbService.GetConnection();
+                conn.Open();
+                var cmd = new SqlCommand("SELECT name, line_production, process FROM line WHERE id = @id", conn);
+                cmd.Parameters.AddWithValue("@id", id);
+                using var r = cmd.ExecuteReader();
+                if (r.Read())
+                {
+                    name = r["name"] != DBNull.Value ? r["name"].ToString() : "Unknown";
+                    line = r["line_production"] != DBNull.Value ? r["line_production"].ToString() : "-";
+                    process = r["process"] != DBNull.Value ? r["process"].ToString() : "-";
+                }
+            }
+            catch { /* Ignore, gunakan default */ }
+            return (name, line, process);
+        }
+
+        // ==================================================================
+        // 3. UI EVENTS (Start, Stop, Connect, Clear)
+        // ==================================================================
+        private void BtnStart_Click(object sender, RoutedEventArgs e)
+        {
+            var portName = comboPorts.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(portName)) { MessageBox.Show("Select Port."); return; }
+
+            int baud = 115200;
+            if (comboBaud.SelectedItem is ComboBoxItem item && int.TryParse(item.Content.ToString(), out int b)) baud = b;
+
+            try
+            {
+                _serialService.Start(portName, baud);
+                EnsureSubscribed();
+                btnStart.IsEnabled = false;
+                btnStop.IsEnabled = true;
+                txtStatus.Text = $"Running ({portName})";
+                LogToUI($"Started on {portName} @ {baud}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed: {ex.Message}");
+                LogToUI($"Start Error: {ex.Message}");
+            }
+        }
+
+        private void BtnStop_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // 1. Hentikan Serial
+                _serialService.Stop();
+                if (_subscribed) { _serialService.DataReceived -= SerialService_DataReceived; _subscribed = false; }
+
+                btnStart.IsEnabled = true;
+                btnStop.IsEnabled = false;
+                txtStatus.Text = "Stopped";
+                LogToUI("Serial Stopped.");
+
+                // 2. GENERATE EXCEL SAAT STOP (Finalisasi sesi)
+                LogToUI("[SYSTEM] Finalizing Excel Report...");
+                var info = _csvService.GetCurrentShiftInfo();
+
+                Task.Run(() =>
+                {
+                    _csvService.FinalizeExcel(info.shiftName, info.shiftDate);
+                    Application.Current.Dispatcher.Invoke(() => LogToUI("[SUCCESS] Excel Report Generated."));
+                });
+            }
+            catch (Exception ex) { LogToUI($"Stop Error: {ex.Message}"); }
+        }
+
+        private void BtnClear_Click(object sender, RoutedEventArgs e)
+        {
+            listBoxLogs.Items.Clear();
+            listBoxFilteredData.Items.Clear();
+        }
+
+        private void BtnDbConnect_Click(object sender, RoutedEventArgs e)
+        {
+            InitializeDatabaseServices();
+        }
+
+        // ==================================================================
+        // 4. SYSTEM HELPERS (Init, Log, Config)
+        // ==================================================================
+        private void InitializeDatabaseServices()
+        {
             try
             {
                 _dbService = new DatabaseService();
-                _summaryService = new SummaryService(_dbService);
-                // Buat realtime service dengan connection string yang valid
-                _realtimeService = new RealtimeDataService(_dbService.GetConnection().ConnectionString);
-                LogDebug("Database and RealtimeDataService initialized (default ctor).");
-            }
-            catch (Exception ex)
-            {
-                // fallback: tetap buat SummaryService dengan db jika perlu; catat error
-                try
+                if (_dbService.TestConnection())
                 {
-                    // jika _dbService gagal, buat SummaryService dengan null tidak mungkin, jadi tangani
-                    LogDebug($"Database initialization failed: {ex.Message}");
+                    _realtimeService = new RealtimeDataService(_dbService.GetConnection().ConnectionString);
+                    UpdateDbStatusUI(true);
+                    LogToUI("Database Connected & Service Ready.");
                 }
-                catch { }
-                // Jika membutuhkan, Anda bisa menampilkan pesan atau men-disable fitur DB di UI.
-                _summaryService = new SummaryService(new DatabaseService()); // minimal agar field readonly punya nilai
-            }
-        }
-
-        // Overload ctor — dipanggil dari Admin.xaml.cs (pastikan compatible)
-        public SerialMonitorControl(SerialPortService existingService)
-        {
-            InitializeComponent();
-
-            EnsureLogDirectory();
-
-            _serialService = existingService ?? new SerialPortService();
-            _dataProcessingService = new DataProcessingService();
-
-            InitPorts();
-            EnsureSubscribed();
-
-            // Pastikan juga inisialisasi DB & realtime service agar Admin yang memanggil ctor(SerialPortService) tetap bekerja
-            try
-            {
-                _dbService = new DatabaseService();
-                _summaryService = new SummaryService(_dbService);
-                _realtimeService = new RealtimeDataService(_dbService.GetConnection().ConnectionString);
-                LogDebug("Database and RealtimeDataService initialized (overload ctor).");
-            }
-            catch (Exception ex)
-            {
-                LogDebug($"Database initialization failed in overload ctor: {ex.Message}");
-                // still keep app running; DB operations will be skipped with a clear debug message when attempted
-                _summaryService = new SummaryService(new DatabaseService());
-            }
-        }
-
-        private void EnsureLogDirectory()
-        {
-            try
-            {
-                if (!Directory.Exists(_logDirectory))
-                    Directory.CreateDirectory(_logDirectory);
-            }
-            catch { /* jangan crash app hanya karena log */ }
-        }
-
-        private void LogDebug(string message)
-        {
-            string text = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
-            try
-            {
-                File.AppendAllText(_logFile, text + Environment.NewLine);
-            }
-            catch { /* ignore logging IO errors */ }
-
-            Console.WriteLine(text);
-
-            try
-            {
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                else
                 {
-                    // pastikan listBoxFilteredData ada di XAML
-                    if (this.FindName("listBoxFilteredData") is ListBox lb)
-                    {
-                        lb.Items.Insert(0, text);
-                    }
-                }));
-            }
-            catch { /* ignore UI logging errors */ }
-        }
-
-        private void EnsureSubscribed()
-        {
-            if (_subscribed) return;
-            try
-            {
-                _serialService.DataReceived += SerialService_DataReceived;
-                _subscribed = true;
-            }
-            catch (Exception ex)
-            {
-                LogDebug($"EnsureSubscribed exception: {ex.Message}");
-            }
-
-            if (_serialService.IsRunning)
-            {
-                try
-                {
-                    if (this.FindName("btnStart") is Button btnStart) btnStart.IsEnabled = false;
-                    if (this.FindName("btnStop") is Button btnStop) btnStop.IsEnabled = true;
-                    if (this.FindName("txtStatus") is TextBlock txtStatus) txtStatus.Text = "Running";
-                }
-                catch { }
-            }
-        }
-
-        private void StopLogWatcher()
-        {
-            try
-            {
-                if (_logWatcher != null)
-                {
-                    _logWatcher.EnableRaisingEvents = false;
-                    _logWatcher.Changed -= LogWatcher_Changed;
-                    _logWatcher.Dispose();
-                    _logWatcher = null;
+                    UpdateDbStatusUI(false);
+                    LogToUI("Database Connected but Test Failed.");
                 }
             }
             catch (Exception ex)
             {
-                LogDebug($"StopLogWatcher error: {ex.Message}");
-            }
-        }
-
-        private void LogWatcher_Changed(object sender, FileSystemEventArgs e)
-        {
-            try
-            {
-                using var fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                if (_logPosition > fs.Length) _logPosition = 0; // rotated or truncated
-                fs.Seek(_logPosition, SeekOrigin.Begin);
-                using var sr = new StreamReader(fs, Encoding.UTF8);
-                var added = sr.ReadToEnd();
-                _logPosition = fs.Position;
-                if (string.IsNullOrEmpty(added)) return;
-                var lines = added.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (this.FindName("listBoxLogs") is ListBox listBoxLogs)
-                    {
-                        for (int i = lines.Length - 1; i >= 0; i--)
-                        {
-                            listBoxLogs.Items.Insert(0, lines[i]);
-                        }
-                        if (listBoxLogs.Items.Count > 1000)
-                        {
-                            while (listBoxLogs.Items.Count > 1000) listBoxLogs.Items.RemoveAt(listBoxLogs.Items.Count - 1);
-                        }
-                    }
-                }));
-            }
-            catch (Exception ex)
-            {
-                LogDebug($"LogWatcher_Changed error: {ex.Message}");
+                UpdateDbStatusUI(false);
+                LogToUI($"Database Init Error: {ex.Message}");
             }
         }
 
@@ -222,260 +331,73 @@ namespace MonitoringApp.Pages.Admin
             try
             {
                 var ports = SerialPort.GetPortNames().OrderBy(p => p).ToArray();
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (this.FindName("comboPorts") is ComboBox comboPorts)
-                    {
-                        comboPorts.ItemsSource = ports.Length == 0 ? new[] { "COM4" } : ports;
-                        comboPorts.SelectedIndex = 0;
-                    }
-                }));
+                comboPorts.ItemsSource = ports;
+                if (ports.Length > 0) comboPorts.SelectedIndex = 0;
+                else LogToUI("No Serial Ports found.");
             }
-            catch (Exception ex)
-            {
-                LogDebug($"InitPorts error: {ex.Message}");
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (this.FindName("comboPorts") is ComboBox comboPorts)
-                    {
-                        comboPorts.Items.Add("COM4");
-                        comboPorts.SelectedIndex = 0;
-                    }
-                }));
-            }
+            catch (Exception ex) { LogToUI($"Error getting ports: {ex.Message}"); }
         }
 
-        // --- Event handlers kept (tidak dihapus) ---
-        private void BtnStart_Click(object sender, RoutedEventArgs e)
+        private void LogToUI(string message, bool isError = false)
         {
-            var portName = (this.FindName("comboPorts") as ComboBox)?.SelectedItem?.ToString()
-                           ?? "COM4";
-            int baud = 115200;
-            try
-            {
-                var sel = this.FindName("comboBaud") as ComboBoxItem;
-                if (sel != null) Int32.TryParse(sel.Content.ToString(), out baud);
-            }
-            catch { }
+            string timestamp = DateTime.Now.ToString("HH:mm:ss");
+            string fullLog = $"[{timestamp}] {message}";
 
-            try
+            Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                _serialService.EnsureConsole();
-                EnsureSubscribed();
-                _serialService.Start(portName, baud);
+                if (listBoxLogs == null) return;
+                listBoxLogs.Items.Insert(0, fullLog);
+                if (listBoxLogs.Items.Count > 500) listBoxLogs.Items.RemoveAt(listBoxLogs.Items.Count - 1);
+            });
 
-                if (this.FindName("btnStart") is Button btnStart) btnStart.IsEnabled = false;
-                if (this.FindName("btnStop") is Button btnStop) btnStop.IsEnabled = true;
-                if (this.FindName("txtStatus") is TextBlock txtStatus) txtStatus.Text = $"Running ({portName}@{baud})";
-
-                LogDebug($"Serial started on {portName}@{baud}");
-            }
-            catch (Exception ex)
+            Task.Run(async () =>
             {
-                MessageBox.Show($"Unable to open port: {ex.Message}", "Serial Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                if (this.FindName("txtStatus") is TextBlock txtStatus) txtStatus.Text = "Error";
-                LogDebug($"Serial start failed: {ex.Message}");
-            }
+                try { await File.AppendAllTextAsync(_logFile, fullLog + Environment.NewLine); } catch { }
+            });
+            Console.WriteLine(fullLog);
         }
 
-        private void BtnStop_Click(object sender, RoutedEventArgs e)
+        private void LogFilteredData(string message)
         {
-            try { if (_subscribed) { _serialService.DataReceived -= SerialService_DataReceived; _subscribed = false; } } catch { }
-            try { _serialService.Stop(); } catch { }
-
-            if (this.FindName("btnStart") is Button btnStart) btnStart.IsEnabled = true;
-            if (this.FindName("btnStop") is Button btnStop) btnStop.IsEnabled = false;
-            if (this.FindName("txtStatus") is TextBlock txtStatus) txtStatus.Text = "Stopped";
-
-            LogDebug("Serial stopped.");
+            Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (listBoxFilteredData == null) return;
+                listBoxFilteredData.Items.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+                if (listBoxFilteredData.Items.Count > 100) listBoxFilteredData.Items.RemoveAt(listBoxFilteredData.Items.Count - 1);
+            });
         }
 
-        private void BtnClear_Click(object sender, RoutedEventArgs e)
+        private void EnsureSubscribed()
         {
-            try
-            {
-                if (this.FindName("listBoxLogs") is ListBox listBoxLogs) listBoxLogs.Items.Clear();
-            }
-            catch { }
-            LogDebug("Cleared listBoxLogs.");
+            if (!_subscribed) { _serialService.DataReceived += SerialService_DataReceived; _subscribed = true; }
         }
 
-        private void SerialService_DataReceived(object? sender, SerialDataEventArgs e)
+        private void UpdateDbStatusUI(bool connected)
         {
-            try
-            {
-                var lines = e.Text.Replace("\r\n", "\n").Replace("\r", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var line in lines)
-                {
-                    var trimmed = line.Trim();
-                    if (string.IsNullOrWhiteSpace(trimmed)) continue;
-                    var tokens = trimmed.Split(',').Select(t => t.Trim()).ToArray();
-                    if (tokens.Length < 2) continue;
-                    if (!int.TryParse(tokens[0], out int idKey)) continue;
-                    var rawData = tokens.Select(value =>
-                    {
-                        if (int.TryParse(value, out var intValue)) return (object)intValue;
-                        if (float.TryParse(value, out var floatValue)) return (object)floatValue;
-                        return value;
-                    }).ToArray();
-                    ProcessSerialData(idKey, rawData);
-                }
-            }
-            catch (Exception ex)
-            {
-                try
-                {
-                    if (this.FindName("listBoxLogs") is ListBox listBoxLogs)
-                        Application.Current.Dispatcher.BeginInvoke(new Action(() => listBoxLogs.Items.Add($"Serial error: {ex.Message}")));
-                }
-                catch { }
-                LogDebug($"SerialService_DataReceived error: {ex.Message}");
-            }
+            txtDbStatus.Text = connected ? "Connected" : "Disconnected";
+            dbStatusIndicator.Fill = connected ? new SolidColorBrush(Color.FromRgb(16, 185, 129)) : new SolidColorBrush(Color.FromRgb(239, 68, 68));
         }
 
-        private void ProcessSerialData(int idKey, object[] rawData)
+        private void EnsureLogDirectory()
         {
-            // Check if data is all zeros (excluding ID)
-            if (rawData.Skip(1).All(value => value.Equals(0)))
-            {
-                var comment = $"ID {idKey}: Data semua 0, diabaikan.";
-                try { Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (this.FindName("listBoxLogs") is ListBox lb) lb.Items.Add(comment); })); } catch { }
-                LogDebug(comment);
-                Console.WriteLine(comment);
-                return;
-            }
-
-            // Debug log data masuk
-            LogDebug($"Received ID {idKey}: {string.Join(", ", rawData.Skip(1))}");
-
-            if (_realtimeService == null)
-            {
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (this.FindName("listBoxFilteredData") is ListBox listBoxFilteredData)
-                    {
-                        listBoxFilteredData.Items.Insert(0, $"[DB ERROR] ID {idKey}: RealtimeDataService belum diinisialisasi. Pastikan koneksi DB berhasil.");
-                    }
-                }));
-                LogDebug($"RealtimeDataService null when attempting to save ID {idKey}.");
-            }
-            else
-            {
-                try
-                {
-                    if (rawData.Length >= 10)
-                    {
-                        _realtimeService.SaveToDatabase(
-                            idKey,
-                            Convert.ToInt32(rawData[1]),
-                            Convert.ToInt32(rawData[2]),
-                            Convert.ToSingle(rawData[3]),
-                            Convert.ToSingle(rawData[4]),
-                            Convert.ToInt32(rawData[5]),
-                            TimeSpan.FromSeconds(Convert.ToSingle(rawData[6])),
-                            TimeSpan.FromSeconds(Convert.ToSingle(rawData[7])),
-                            Convert.ToInt32(rawData[8]),
-                            Convert.ToInt32(rawData[9])
-                        );
-
-                        LogDebug($"[DB OK] Data ID {idKey} berhasil disimpan.");
-                    }
-                    else
-                    {
-                        LogDebug($"[DB WARNING] Data ID {idKey} format tidak lengkap (length {rawData.Length}).");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogDebug($"[DB ERROR] ID {idKey}: {ex.Message}");
-                    Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        if (this.FindName("listBoxFilteredData") is ListBox listBoxFilteredData)
-                        {
-                            listBoxFilteredData.Items.Insert(0, $"[DB ERROR] ID {idKey}: Gagal menyimpan ke database: {ex.Message}");
-                        }
-                    }));
-                }
-            }
-
-            // Bandingkan dengan cache per ID
-            if (_localCache.TryGetValue(idKey, out var cachedData))
-            {
-                if (AreArraysEqual(rawData, cachedData))
-                {
-                    var comment = $"ID {idKey}: Data sama, diabaikan.";
-                    try { Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (this.FindName("listBoxLogs") is ListBox lb) lb.Items.Add(comment); })); } catch { }
-                    LogDebug(comment);
-                    return;
-                }
-            }
-
-            // Data baru, simpan dan tampilkan di UI & terminal
-            _localCache[idKey] = rawData;
-
-            var formattedData = $"ID {idKey}: {string.Join(", ", rawData.Skip(1))}";
-            try { Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (this.FindName("listBoxLogs") is ListBox lb) lb.Items.Add(formattedData); })); } catch { }
-            Console.WriteLine(formattedData);
+            if (!Directory.Exists(_logDirectory)) Directory.CreateDirectory(_logDirectory);
         }
 
-        private static bool AreArraysEqual(object[] data1, object[] data2)
+        private void SerialMonitorControl_Loaded(object sender, RoutedEventArgs e)
         {
-            if (data1.Length != data2.Length) return false;
-            for (int i = 0; i < data1.Length; i++)
-            {
-                if (!data1[i].Equals(data2[i])) return false;
-            }
-            return true;
-        }
-
-        private void SerialMonitorControl_Loaded(object? sender, RoutedEventArgs e)
-        {
-            try
+            if (_serialService.IsRunning)
             {
                 EnsureSubscribed();
-            }
-            catch (Exception ex)
-            {
-                LogDebug($"Loaded handler error: {ex.Message}");
+                btnStart.IsEnabled = false;
+                btnStop.IsEnabled = true;
+                txtStatus.Text = "Running (Resumed)";
             }
         }
 
-        private void SerialMonitorControl_Unloaded(object? sender, RoutedEventArgs e)
+        private void SerialMonitorControl_Unloaded(object sender, RoutedEventArgs e)
         {
-            try { if (_subscribed) { _serialService.DataReceived -= SerialService_DataReceived; _subscribed = false; } } catch { }
-            try { StopLogWatcher(); } catch { }
-            LogDebug("Control unloaded.");
-        }
-
-        private async void BtnDbConnect_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                if (_dbService == null) _dbService = new DatabaseService();
-                bool isConnected = _dbService.TestConnection();
-
-                if (this.FindName("txtDbStatus") is TextBlock txtDbStatus)
-                    txtDbStatus.Text = isConnected ? "DB: Connected" : "DB: Disconnected";
-                if (this.FindName("dbStatusIndicator") is System.Windows.Shapes.Rectangle rect)
-                    rect.Fill = isConnected ? Brushes.Green : Brushes.Red;
-
-                if (!isConnected)
-                {
-                    MessageBox.Show("Failed to connect to the database.", "Database Connection", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-
-                LogDebug($"DB test connection: {(isConnected ? "Connected" : "Disconnected")}");
-            }
-            catch (Exception ex)
-            {
-                if (this.FindName("txtDbStatus") is TextBlock txtDbStatus)
-                    txtDbStatus.Text = "DB: Error";
-                if (this.FindName("dbStatusIndicator") is System.Windows.Shapes.Rectangle rect)
-                    rect.Fill = Brushes.Red;
-
-                MessageBox.Show($"Error connecting to database: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                LogDebug($"BtnDbConnect_Click error: {ex.Message}");
-            }
+            if (_subscribed) { _serialService.DataReceived -= SerialService_DataReceived; _subscribed = false; }
+            _clockTimer?.Stop();
         }
     }
 }

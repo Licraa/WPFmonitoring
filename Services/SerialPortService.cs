@@ -18,18 +18,6 @@ namespace MonitoringApp.Services
         public DateTime Timestamp { get; set; }
     }
 
-    /// <summary>
-    /// Simple SerialPort reader service.
-    /// - Starts a SerialPort on the given port (default COM4).
-    /// - Raises DataReceived events.
-    /// - Logs to Debug, Console (if present) and to a file under Logs/serial.log.
-    /// Usage sample:
-    /// var svc = new SerialPortService();
-    /// svc.EnsureConsole(); // optional: creates a console window for WPF
-    /// svc.DataReceived += (s,e) => Console.WriteLine($"RX: {e.Text}");
-    /// svc.Start("COM4", 9600);
-    /// ... svc.Stop(); svc.Dispose();
-    /// </summary>
     public class SerialPortService : IDisposable
     {
         private SerialPort? _port;
@@ -81,7 +69,10 @@ namespace MonitoringApp.Services
             {
                 Encoding = Encoding.ASCII,
                 ReadTimeout = 500,
-                WriteTimeout = 500
+                WriteTimeout = 500,
+                DtrEnable = true,  // PENTING: Untuk beberapa Arduino (Uno/Mega) agar reset saat connect
+                RtsEnable = true,  // PENTING: Stabilkan koneksi
+                NewLine = "\n"     // PENTING: Agar ReadLine() tahu batas baris (sesuaikan dengan Arduino Serial.println)
             };
 
             _port.DataReceived += Port_DataReceived;
@@ -93,51 +84,53 @@ namespace MonitoringApp.Services
             }
             catch (Exception ex)
             {
-                Log($"[StartError] {ex}");
+                Log($"[StartError] {ex.Message}");
                 throw;
             }
         }
 
-        private StringBuilder _lineBuffer = new StringBuilder();
-
         private void Port_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
+            var sp = (SerialPort)sender;
+
+            // Gunakan try-catch agar jika serial putus/error aplikasi tidak crash
             try
             {
-                var sp = (SerialPort)sender;
-                int available = sp.BytesToRead;
-                if (available <= 0) return;
-
-                byte[] buffer = new byte[available];
-                int read = sp.Read(buffer, 0, available);
-                string text = Encoding.ASCII.GetString(buffer, 0, read);
-
-                // Buffering per line
-                _lineBuffer.Append(text);
-                string allText = _lineBuffer.ToString();
-                string[] lines = allText.Replace("\r\n", "\n").Replace("\r", "\n").Split(new[] { '\n' }, StringSplitOptions.None);
-
-                for (int i = 0; i < lines.Length - 1; i++) // process all complete lines
+                // Loop selagi ada data yang bisa dibaca
+                // (Terkadang ReadLine bisa melempar TimeoutException, jadi kita handle)
+                while (sp.BytesToRead > 0)
                 {
-                    var line = lines[i];
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-                    var args = new SerialDataEventArgs
+                    try
                     {
-                        Data = Encoding.ASCII.GetBytes(line),
-                        Text = line,
-                        Timestamp = DateTime.Now
-                    };
-                    try { DataReceived?.Invoke(this, args); } catch { }
-                    Log($"{line.TrimEnd()}".TrimEnd());
-                }
+                        // Baca satu baris penuh sampai ketemu enter (\n)
+                        string line = sp.ReadLine();
 
-                // Save incomplete line back to buffer
-                _lineBuffer.Clear();
-                _lineBuffer.Append(lines[^1]);
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        // Fire event ke UI
+                        var args = new SerialDataEventArgs
+                        {
+                            Data = Encoding.ASCII.GetBytes(line), // Opsional, jika butuh byte
+                            Text = line.Trim(), // Bersihkan spasi/enter di ujung
+                            Timestamp = DateTime.Now
+                        };
+
+                        // Panggil event secara aman
+                        DataReceived?.Invoke(this, args);
+
+                        // Log untuk debug (opsional)
+                        // Log($"RX: {line.Trim()}"); 
+                    }
+                    catch (TimeoutException)
+                    {
+                        // Wajar terjadi jika data terpotong di tengah jalan, abaikan saja
+                        break;
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Log($"[RXError] {ex}");
+                Log($"{ex.Message}");
             }
         }
 
