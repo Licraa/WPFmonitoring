@@ -1,36 +1,47 @@
 using System.Windows;
 using System.Windows.Input;
-using MonitoringApp.Pages; // Pastikan ini sesuai dengan namespace MainWindow Anda
+using MonitoringApp.Pages;
+using MonitoringApp.Services; // Tambahkan ini
 
-namespace MonitoringApp
+namespace MonitoringApp.Pages
 {
     public partial class LoginWindow : Window
     {
+        private readonly AuthService _authService;
+
         public LoginWindow()
         {
             InitializeComponent();
+            _authService = new AuthService();
 
-            // Logika agar window bisa digeser (drag) saat diklik kiri
+            // Logika drag window
             this.MouseLeftButtonDown += (sender, e) =>
             {
-                if (e.ButtonState == MouseButtonState.Pressed)
-                {
-                    this.DragMove();
-                }
+                if (e.ButtonState == MouseButtonState.Pressed) this.DragMove();
             };
         }
 
         private void Login_Click(object sender, RoutedEventArgs e)
         {
-            // Cek username dan password
-            if (txtUsername.Text == "user" && txtPassword.Password == "123")
+            string username = txtUsername.Text;
+            string password = txtPassword.Password;
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                // Buka MainWindow (Dashboard)
-                var mainWin = new MainWindow(); 
+                MessageBox.Show("Username dan Password harus diisi!", "Peringatan", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 1. Cek ke Database
+            string? role = _authService.Login(username, password);
+
+            if (role != null)
+            {
+                // 2. Jika Sukses, Buka MainWindow sambil membawa Role
+                var mainWin = new MainWindow(role); // Kita akan modifikasi MainWindow sebentar lagi
                 mainWin.Show();
-                
-                // Tutup Login Window
-                this.Close(); 
+
+                this.Close();
             }
             else
             {

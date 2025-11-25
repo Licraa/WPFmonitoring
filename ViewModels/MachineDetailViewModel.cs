@@ -1,15 +1,20 @@
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks; // [Wajib ada untuk Task.Delay]
 
 namespace MonitoringApp.ViewModels
 {
-    // Warisi ViewModelBase
+    // Pastikan ViewModelBase sudah mengimplementasikan INotifyPropertyChanged
     public class MachineDetailViewModel : ViewModelBase
     {
+        // Data Statis (Jarang berubah) - Pakai auto-property tidak apa-apa
         public int Id { get; set; }
         public string Line { get; set; }
         public string Name { get; set; }
         public string Process { get; set; }
 
+        // Data Dinamis (Sering berubah) - Pakai Backing Field + OnPropertyChanged
         private string _remark;
         public string Remark
         {
@@ -61,7 +66,6 @@ namespace MonitoringApp.ViewModels
             }
         }
 
-        // Property ini readonly, nilainya bergantung pada NilaiA0
         public string Status => NilaiA0 == 1 ? "Active" : "Inactive";
 
         // Objek Shift (Nested ViewModels)
@@ -85,9 +89,69 @@ namespace MonitoringApp.ViewModels
             get => _shift3;
             set { _shift3 = value; OnPropertyChanged(); }
         }
+
+        // --- LOGIKA FLASH / BLINK ---
+        private bool _isJustUpdated;
+        public bool IsJustUpdated
+        {
+            get => _isJustUpdated;
+            set
+            {
+                // Kita tidak perlu cek if (_isJustUpdated != value) disini
+                // Agar animasi bisa dipicu berulang kali meskipun nilainya diset true lagi
+                _isJustUpdated = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public async void TriggerFlash()
+        {
+            IsJustUpdated = true;       // Nyalakan Overlay Kuning
+            await Task.Delay(500);      // Tunggu 500ms (Sama seperti JS setTimeout)
+            IsJustUpdated = false;      // Matikan Overlay
+        }
+
+        public bool IsDifferentFrom(MachineDetailViewModel newData)
+        {
+            if (newData == null) return false;
+
+            // --- LOGIKA BARU: HANYA BLINK JIKA PENTING ---
+
+            // 1. Cek Status Mesin (Penting: Blink jika Mesin Mati/Nyala)
+            if (this.NilaiA0 != newData.NilaiA0)
+            {
+                // Debugging: Lihat output window biar tau kenapa blink
+                System.Diagnostics.Debug.WriteLine($"[BLINK] Status Berubah: {this.NilaiA0} -> {newData.NilaiA0}");
+                return true;
+            }
+
+            // 2. Cek Jumlah Produksi (Penting: Blink jika ada barang baru)
+            // Gunakan '?? 0' untuk jaga-jaga kalau null
+            int count1 = this.Shift1?.Count ?? 0;
+            int newCount1 = newData.Shift1?.Count ?? 0;
+
+            int count2 = this.Shift2?.Count ?? 0;
+            int newCount2 = newData.Shift2?.Count ?? 0;
+
+            int count3 = this.Shift3?.Count ?? 0;
+            int newCount3 = newData.Shift3?.Count ?? 0;
+
+            if (count1 != newCount1 || count2 != newCount2 || count3 != newCount3)
+            {
+                System.Diagnostics.Debug.WriteLine($"[BLINK] Count Berubah!");
+                return true;
+            }
+
+            // --- KITA ABAIKAN LastUpdate ---
+            // Jangan blink cuma gara-gara jam berubah. 
+            // Data jam tetap akan ter-update di layar (karena ada kode update di MainWindow),
+            // tapi tidak akan memicu animasi flash kuning.
+
+            return false;
+        }
     }
 
-    // Nested Class juga perlu mewarisi ViewModelBase agar properti di dalamnya bisa update realtime
+    // Nested Class untuk Shift
     public class ShiftSummaryViewModel : ViewModelBase
     {
         public int Id { get; set; }
@@ -100,14 +164,14 @@ namespace MonitoringApp.ViewModels
         }
 
         private string _downtime;
-        public string Downtime // format jam:menit:detik
+        public string Downtime
         {
             get => _downtime;
             set { if (_downtime != value) { _downtime = value; OnPropertyChanged(); } }
         }
 
         private string _uptime;
-        public string Uptime // format jam:menit:detik
+        public string Uptime
         {
             get => _uptime;
             set { if (_uptime != value) { _uptime = value; OnPropertyChanged(); } }

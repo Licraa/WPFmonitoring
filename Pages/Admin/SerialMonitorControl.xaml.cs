@@ -33,7 +33,7 @@ namespace MonitoringApp.Pages
         private readonly string _logDirectory = "Logs";
         private readonly string _logFile = Path.Combine("Logs", "realtime_debug.log");
 
-        public event EventHandler? RequestClose;
+        //public event EventHandler? RequestClose;
 
         // Constructor Utama
         public SerialMonitorControl(SerialPortService? existingService = null)

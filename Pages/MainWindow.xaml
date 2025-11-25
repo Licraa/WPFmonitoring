@@ -7,6 +7,33 @@
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
+        <SolidColorBrush x:Key="ActiveBrush" Color="#2E7D32"/>
+        <SolidColorBrush x:Key="InactiveBrush" Color="#C62828"/>
+
+        <Style x:Key="MachineCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource InactiveBrush}"/>
+            <Setter Property="BorderBrush" Value="#B71C1C"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="15"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="Active">
+                    <Setter Property="Background" Value="{StaticResource ActiveBrush}"/>
+                    <Setter Property="BorderBrush" Value="#1B5E20"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CardInnerPanel" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="BorderBrush" Value="#E6E6E6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
         <Style x:Key="ModernContextMenu" TargetType="ContextMenu">
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -15,11 +42,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                CornerRadius="12"
-                                Padding="6">
+                        <Border Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="12" Padding="6">
                             <Border.Effect>
                                 <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="20" ShadowDepth="5"/>
                             </Border.Effect>
@@ -32,7 +55,8 @@
 
         <Style x:Key="ModernMenuItem" TargetType="MenuItem">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#374151"/> <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="15,10"/>
             <Setter Property="Margin" Value="0,2"/>
@@ -40,21 +64,16 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
-                        <Border x:Name="Border" 
-                                Background="{TemplateBinding Background}" 
-                                CornerRadius="8" 
-                                SnapsToDevicePixels="True">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="8" SnapsToDevicePixels="True">
                             <Grid>
-                                <ContentPresenter Content="{TemplateBinding Header}" 
-                                                Margin="{TemplateBinding Padding}"
-                                                VerticalAlignment="Center"
-                                                HorizontalAlignment="Left"/>
+                                <ContentPresenter Content="{TemplateBinding Header}" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
                             </Grid>
                         </Border>
-                        
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#EFF6FF"/> <Setter Property="Foreground" Value="#2563EB"/> </Trigger>
+                                <Setter TargetName="Border" Property="Background" Value="#EFF6FF"/>
+                                <Setter Property="Foreground" Value="#2563EB"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -73,9 +92,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
     </Window.Resources>
-        
 
     <Grid>
         <Grid.RowDefinitions>
@@ -83,47 +100,20 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid.Resources>
-            <SolidColorBrush x:Key="ActiveBrush" Color="#2E7D32"/>
-            <SolidColorBrush x:Key="InactiveBrush" Color="#C62828"/>
-
-            <Style x:Key="MachineCardStyle" TargetType="Border">
-                <Setter Property="Background" Value="{StaticResource InactiveBrush}"/>
-                <Setter Property="BorderBrush" Value="#B71C1C"/>
-                <Setter Property="BorderThickness" Value="2"/>
-                <Setter Property="CornerRadius" Value="15"/>
-                <Setter Property="Padding" Value="20"/>
-                <Setter Property="SnapsToDevicePixels" Value="True"/>
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="Active">
-                        <Setter Property="Background" Value="{StaticResource ActiveBrush}"/>
-                        <Setter Property="BorderBrush" Value="#1B5E20"/>
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-
-            <Style x:Key="CardInnerPanel" TargetType="Border">
-                <Setter Property="Background" Value="White"/>
-                <Setter Property="CornerRadius" Value="8"/>
-                <Setter Property="Padding" Value="8"/>
-                <Setter Property="Margin" Value="0,0,0,8"/>
-                <Setter Property="BorderBrush" Value="#E6E6E6"/>
-                <Setter Property="BorderThickness" Value="1"/>
-            </Style>
-        </Grid.Resources>
-
         <ContentControl Grid.Row="0" Height="80">
             <controls:AppHeader />
         </ContentControl>
 
         <Grid Grid.Row="1">
-            
+
             <Grid x:Name="DashboardPanel" Visibility="Visible">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/> <RowDefinition Height="*"/>    </Grid.RowDefinitions>
-                
-                <Border Grid.Row="0" Margin="20,10,20,10" Padding="15" Background="White" CornerRadius="10" BorderBrush="#CCCCCC" BorderThickness="1" HorizontalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Margin="0,10,0,10" Padding="15" Background="White" CornerRadius="10" BorderBrush="#CCCCCC" BorderThickness="1" HorizontalAlignment="Center" Width="1086">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <StackPanel Margin="40,0">
                             <TextBlock Text="{Binding Active}" Foreground="Green" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBlock Text="Connected Machine" FontSize="14" HorizontalAlignment="Center"/>
@@ -141,8 +131,8 @@
 
                 <Button Grid.Row="0" 
                         HorizontalAlignment="Left" 
-                        VerticalAlignment="Center" 
-                        Margin="30,0,0,0" 
+                        VerticalAlignment="Top" 
+                        Margin="65,30,0,0" 
                         Background="White" 
                         BorderBrush="#D1D5DB"
                         BorderThickness="1"
@@ -152,22 +142,15 @@
 
                     <Button.ContextMenu>
                         <ContextMenu x:Name="HamburgerMenu" StaysOpen="False" Style="{StaticResource ModernContextMenu}">
-                            
                             <MenuItem Header="⚙️   Admin Panel" Click="BtnOpenAdmin_Click" Style="{StaticResource ModernMenuItem}"/>
-                            
                             <Separator Style="{StaticResource ModernSeparator}"/>
-                            
                             <MenuItem Header="📥   Download Excel Report" Click="BtnDownloadExcel_Click" Style="{StaticResource ModernMenuItem}"/>
-                            
                         </ContextMenu>
                     </Button.ContextMenu>
 
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}" 
-                                    BorderBrush="{TemplateBinding BorderBrush}" 
-                                    BorderThickness="{TemplateBinding BorderThickness}" 
-                                    CornerRadius="8" Padding="15,10">
+                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="15,10">
                                 <Border.Effect>
                                     <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="4" ShadowDepth="1"/>
                                 </Border.Effect>
@@ -184,7 +167,7 @@
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-                
+
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <ItemsControl x:Name="cardContainer">
                         <ItemsControl.ItemsPanel>
@@ -275,7 +258,7 @@
                                 <TextBlock Text="Total Machine" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
-                        <Border Grid.Column="2"  CornerRadius="8"  VerticalAlignment="Center" >
+                        <Border Grid.Column="2" CornerRadius="8" VerticalAlignment="Center" >
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding Line, StringFormat=LINE: {0}}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -292,168 +275,198 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource MachineCardStyle}" Tag="{Binding Status}" Margin="15" Width="380" MinHeight="420" VerticalAlignment="Top">
-                                        <Border.Resources>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="#222"/>
-                                                <Setter Property="FontSize" Value="13"/>
-                                            </Style>
-                                        </Border.Resources>
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Name}" FontSize="28" FontWeight="Bold" Foreground="#111" Margin="0,0,0,12" HorizontalAlignment="Center"/>
-                                            <Border Style="{StaticResource CardInnerPanel}" Margin="0,0,0,10">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Grid.Row="0" Grid.Column="0" Background="#F6D6D6" BorderBrush="#E6BDBD"  Padding="6">
-                                                        <TextBlock Text="LINE" FontWeight="Bold" HorizontalAlignment="center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="0" Grid.Column="1" Background="#F6D6D6" BorderBrush="#E6BDBD"  Padding="6">
-                                                        <TextBlock Text="PROCESS" FontWeight="Bold" HorizontalAlignment="center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="0" Grid.Column="2" Background="#F6D6D6" BorderBrush="#E6BDBD"  Padding="6">
-                                                        <TextBlock Text="LAST UPDATE" FontWeight="Bold" HorizontalAlignment="center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="1" Grid.Column="0" Padding="8" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
-                                                        <TextBlock Text="{Binding Line}" FontWeight="Bold" HorizontalAlignment="center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="1" Grid.Column="1" Padding="8" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
-                                                        <TextBlock Text="{Binding Process}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                                    </Border>
-                                                    <Border Grid.Row="1" Grid.Column="2" Padding="8" BorderBrush="#EDEDED" BorderThickness="0,0,0,0" HorizontalAlignment="Stretch">
-                                                        <TextBlock Text="{Binding LastUpdate}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
-                                                    </Border>
-                                                </Grid>
-                                            </Border>
-                                            <Border Style="{StaticResource CardInnerPanel}" Margin="0,0,0,10">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                                        <TextBlock Text="PART/HR" FontSize="12" FontWeight="Bold" Foreground="#333"/>
-                                                        <TextBlock Text="{Binding PartHours}" FontSize="14" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                                        <TextBlock Text="CYCLE" FontSize="12" FontWeight="Bold" Foreground="#333"/>
-                                                        <TextBlock Text="{Binding Cycle, StringFormat={}{0:N2}}" FontSize="14" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                                        <TextBlock Text="AVG CYCLE" FontSize="12" FontWeight="Bold" Foreground="#333"/>
-                                                        <TextBlock Text="{Binding AvgCycle, StringFormat={}{0:N2}}" FontSize="14" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                            <Border Style="{StaticResource CardInnerPanel}">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="50"/>
-                                                        <ColumnDefinition Width="60"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Grid.Row="0" Grid.Column="0" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6">
-                                                        <TextBlock Text="SHIFT" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="0" Grid.Column="1" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6" BorderThickness="1,0,1,0">
-                                                        <TextBlock Text="COUNT" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="0" Grid.Column="2" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6" BorderThickness="1,0,1,0">
-                                                        <TextBlock Text="DOWNTIME" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="0" Grid.Column="3" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6" BorderThickness="1,0,0,0">
-                                                        <TextBlock Text="UPTIME" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="1" Grid.Column="0" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
-                                                        <TextBlock Text="1st" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="1" Grid.Column="1" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
-                                                        <TextBlock Text="{Binding Shift1.Count}" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="1" Grid.Column="2" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift1.Downtime}" Foreground="#333"/>
-                                                            <TextBlock Text=" (" Margin="5,0,0,0"/>
-                                                            <TextBlock Text="{Binding Shift1.DowntimePercent}" Foreground="#333"/>
-                                                            <TextBlock Text="%)"/>
+                                    <Grid Margin="15" Width="380" MinHeight="420" VerticalAlignment="Top">
+
+                                        <Border Style="{StaticResource MachineCardStyle}" Tag="{Binding Status}">
+                                            <Border.Resources>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#222"/>
+                                                    <Setter Property="FontSize" Value="13"/>
+                                                </Style>
+                                            </Border.Resources>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontSize="28" FontWeight="Bold" Foreground="#111" Margin="0,0,0,12" HorizontalAlignment="Center"/>
+
+                                                <Border Style="{StaticResource CardInnerPanel}" Margin="0,0,0,10">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Row="0" Grid.Column="0" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6">
+                                                            <TextBlock Text="LINE" FontWeight="Bold" HorizontalAlignment="center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="0" Grid.Column="1" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6">
+                                                            <TextBlock Text="PROCESS" FontWeight="Bold" HorizontalAlignment="center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="0" Grid.Column="2" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6">
+                                                            <TextBlock Text="LAST UPDATE" FontWeight="Bold" HorizontalAlignment="center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="1" Grid.Column="0" Padding="8" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
+                                                            <TextBlock Text="{Binding Line}" FontWeight="Bold" HorizontalAlignment="center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="1" Grid.Column="1" Padding="8" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
+                                                            <TextBlock Text="{Binding Process}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                        </Border>
+                                                        <Border Grid.Row="1" Grid.Column="2" Padding="8" BorderBrush="#EDEDED" BorderThickness="0,0,0,0" HorizontalAlignment="Stretch">
+                                                            <TextBlock Text="{Binding LastUpdate}" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border Style="{StaticResource CardInnerPanel}" Margin="0,0,0,10">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                                            <TextBlock Text="PART/HR" FontSize="12" FontWeight="Bold" Foreground="#333"/>
+                                                            <TextBlock Text="{Binding PartHours}" FontSize="14" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
                                                         </StackPanel>
-                                                    </Border>
-                                                    <Border Grid.Row="1" Grid.Column="3" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift1.Uptime}" Foreground="#333"/>
-                                                            <TextBlock Text=" (" Margin="5,0,0,0"/>
-                                                            <TextBlock Text="{Binding Shift1.UptimePercent}" Foreground="#333"/>
-                                                            <TextBlock Text="%)"/>
+                                                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                                            <TextBlock Text="CYCLE" FontSize="12" FontWeight="Bold" Foreground="#333"/>
+                                                            <TextBlock Text="{Binding Cycle, StringFormat={}{0:N2}}" FontSize="14" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
                                                         </StackPanel>
-                                                    </Border>
-                                                    <Border Grid.Row="2" Grid.Column="0" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,1">
-                                                        <TextBlock Text="2nd" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="2" Grid.Column="1" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,1">
-                                                        <TextBlock Text="{Binding Shift2.Count}" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="2" Grid.Column="2" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,1">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift2.Downtime}" Foreground="#333"/>
-                                                            <TextBlock Text=" (" Margin="5,0,0,0"/>
-                                                            <TextBlock Text="{Binding Shift2.DowntimePercent}" Foreground="#333"/>
-                                                            <TextBlock Text="%)"/>
+                                                        <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                                            <TextBlock Text="AVG CYCLE" FontSize="12" FontWeight="Bold" Foreground="#333"/>
+                                                            <TextBlock Text="{Binding AvgCycle, StringFormat={}{0:N2}}" FontSize="14" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
                                                         </StackPanel>
-                                                    </Border>
-                                                    <Border Grid.Row="2" Grid.Column="3" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,0,1">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift2.Uptime}" Foreground="#333"/>
-                                                            <TextBlock Text=" (" Margin="5,0,0,0"/>
-                                                            <TextBlock Text="{Binding Shift2.UptimePercent}" Foreground="#333"/>
-                                                            <TextBlock Text="%)"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border Grid.Row="3" Grid.Column="0" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
-                                                        <TextBlock Text="3rd" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="3" Grid.Column="1" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
-                                                        <TextBlock Text="{Binding Shift3.Count}" HorizontalAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Grid.Row="3" Grid.Column="2" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift3.Downtime}" Foreground="#333"/>
-                                                            <TextBlock Text=" (" Margin="5,0,0,0"/>
-                                                            <TextBlock Text="{Binding Shift3.DowntimePercent}" Foreground="#333"/>
-                                                            <TextBlock Text="%)"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border Grid.Row="3" Grid.Column="3" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,0,0">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift3.Uptime}" Foreground="#333"/>
-                                                            <TextBlock Text=" (" Margin="5,0,0,0"/>
-                                                            <TextBlock Text="{Binding Shift3.UptimePercent}" Foreground="#333"/>
-                                                            <TextBlock Text="%)"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                </Grid>
-                                            </Border>
-                                            
-                                            <StackPanel Margin="0,5,0,0">
-                                                <TextBlock Text="Remark:" Foreground="#111" FontSize="12" FontWeight="Bold"/>
-                                                <TextBlock Text="{Binding Remark}" Foreground="#555" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                    </Grid>
+                                                </Border>
+
+                                                <Border Style="{StaticResource CardInnerPanel}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="50"/>
+                                                            <ColumnDefinition Width="60"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Row="0" Grid.Column="0" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6">
+                                                            <TextBlock Text="SHIFT" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="0" Grid.Column="1" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6" BorderThickness="1,0,1,0">
+                                                            <TextBlock Text="COUNT" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="0" Grid.Column="2" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6" BorderThickness="1,0,1,0">
+                                                            <TextBlock Text="DOWNTIME" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="0" Grid.Column="3" Background="#F6D6D6" BorderBrush="#E6BDBD" Padding="6" BorderThickness="1,0,0,0">
+                                                            <TextBlock Text="UPTIME" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                        </Border>
+
+                                                        <Border Grid.Row="1" Grid.Column="0" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
+                                                            <TextBlock Text="1st" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="1" Grid.Column="1" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
+                                                            <TextBlock Text="{Binding Shift1.Count}" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="1" Grid.Column="2" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift1.Downtime}" Foreground="#333"/>
+                                                                <TextBlock Text=" (" Margin="5,0,0,0"/>
+                                                                <TextBlock Text="{Binding Shift1.DowntimePercent}" Foreground="#333"/>
+                                                                <TextBlock Text="%)"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border Grid.Row="1" Grid.Column="3" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,1,1,1">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift1.Uptime}" Foreground="#333"/>
+                                                                <TextBlock Text=" (" Margin="5,0,0,0"/>
+                                                                <TextBlock Text="{Binding Shift1.UptimePercent}" Foreground="#333"/>
+                                                                <TextBlock Text="%)"/>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Border Grid.Row="2" Grid.Column="0" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,1">
+                                                            <TextBlock Text="2nd" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="2" Grid.Column="1" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,1">
+                                                            <TextBlock Text="{Binding Shift2.Count}" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="2" Grid.Column="2" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,1">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift2.Downtime}" Foreground="#333"/>
+                                                                <TextBlock Text=" (" Margin="5,0,0,0"/>
+                                                                <TextBlock Text="{Binding Shift2.DowntimePercent}" Foreground="#333"/>
+                                                                <TextBlock Text="%)"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border Grid.Row="2" Grid.Column="3" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,0,1">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift2.Uptime}" Foreground="#333"/>
+                                                                <TextBlock Text=" (" Margin="5,0,0,0"/>
+                                                                <TextBlock Text="{Binding Shift2.UptimePercent}" Foreground="#333"/>
+                                                                <TextBlock Text="%)"/>
+                                                            </StackPanel>
+                                                        </Border>
+
+                                                        <Border Grid.Row="3" Grid.Column="0" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
+                                                            <TextBlock Text="3rd" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="3" Grid.Column="1" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
+                                                            <TextBlock Text="{Binding Shift3.Count}" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <Border Grid.Row="3" Grid.Column="2" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,1,0">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift3.Downtime}" Foreground="#333"/>
+                                                                <TextBlock Text=" (" Margin="5,0,0,0"/>
+                                                                <TextBlock Text="{Binding Shift3.DowntimePercent}" Foreground="#333"/>
+                                                                <TextBlock Text="%)"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border Grid.Row="3" Grid.Column="3" Padding="6" BorderBrush="#EDEDED" BorderThickness="0,0,0,0">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift3.Uptime}" Foreground="#333"/>
+                                                                <TextBlock Text=" (" Margin="5,0,0,0"/>
+                                                                <TextBlock Text="{Binding Shift3.UptimePercent}" Foreground="#333"/>
+                                                                <TextBlock Text="%)"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+
+                                                <StackPanel Margin="0,5,0,0">
+                                                    <TextBlock Text="Remark:" Foreground="#111" FontSize="12" FontWeight="Bold"/>
+                                                    <TextBlock Text="{Binding Remark}" Foreground="#555" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
-                                    </Border>
+                                        </Border>
+
+                                        <Border x:Name="FlashOverlay" 
+                    CornerRadius="15" 
+                    Background="#FFD700" 
+                    Opacity="0" 
+                    IsHitTestVisible="False">
+                                        </Border>
+                                    </Grid>
+
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsJustUpdated}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="FlashOverlay" 
+                                             Storyboard.TargetProperty="Opacity"
+                                             From="0.8" To="0.0" Duration="0:0:0.8"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

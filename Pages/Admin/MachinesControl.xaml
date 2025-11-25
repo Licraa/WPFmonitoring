@@ -22,9 +22,9 @@
                 </StackPanel>
             </StackPanel>
 
-            <Button Grid.Column="0" Click="BtnAddMachine_Click" Width="180" Height="50"
+            <Button Click="BtnAddMachine_Click" Width="152" Height="50"
                     Background="#2563EB" Foreground="White" BorderThickness="0"
-                    Padding="40,10" HorizontalAlignment="Center" Cursor="Hand" > 
+                    Padding="40,10" HorizontalAlignment="Center" Cursor="Hand" Margin="0,14,0,12" >
                 <Button.Resources>
                     <Style TargetType="Border">
                         <Setter Property="CornerRadius" Value="6"/>
@@ -150,12 +150,12 @@
 
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="#1F2937" TextTrimming="CharacterEllipsis" MaxWidth="130" ToolTip="{Binding Name}"/>
-                                            
+
                                             <Border Background="#F3F4F6" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Id, StringFormat='ID: {0}'}" FontSize="10" FontWeight="Bold" Foreground="#6B7280"/>
                                             </Border>
                                         </StackPanel>
-                                
+
 
                                         <Button Grid.Column="1" Content="✎" 
                                                 Width="24" Height="24" 
@@ -184,7 +184,8 @@
                                                 <Style TargetType="Button">
                                                     <Style.Triggers>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="Foreground" Value="#DC2626"/> <Setter Property="Background" Value="#FEF2F2"/>
+                                                            <Setter Property="Foreground" Value="#DC2626"/>
+                                                            <Setter Property="Background" Value="#FEF2F2"/>
                                                         </Trigger>
                                                     </Style.Triggers>
                                                 </Style>

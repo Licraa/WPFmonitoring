@@ -1,19 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace MonitoringApp.Models;
-
-public partial class Line
+namespace MonitoringApp.Models
 {
-    public int Id { get; set; }
+    public class Line
+    {
+        [Key]
+        public int Id { get; set; } // Ini akan jadi FK untuk tabel lain
 
-    public string Line1 { get; set; } = null!;
-
-    public string LineProduction { get; set; } = null!;
-
-    public string Process { get; set; } = null!;
-
-    public string Name { get; set; } = null!;
-
-    public string Remark { get; set; } = null!;
+        public string? Line1 { get; set; } // Line fisik (L1, L2)
+        public string LineProduction { get; set; } = string.Empty; // Nama Line (Line A, Line B)
+        public string Process { get; set; } = string.Empty; // Winding, Cutting
+        public string Name { get; set; } = string.Empty; // Nama Mesin
+        public string? Remark { get; set; } // Catatan
+    }
 }

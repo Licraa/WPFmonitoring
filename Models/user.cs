@@ -1,12 +1,22 @@
-using System;
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
-namespace MonitoringApp.Models;
-
-public partial class user
+namespace MonitoringApp.Models
 {
-    public int? Id { get; set; }
-    public string? username { get; set; }
-    public string? password { get; set; }
-    public string? role { get; set; }
+    public class User
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(255)] // Password panjang untuk hash
+        public string Password { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(20)]
+        public string Role { get; set; } = "User"; // "Admin" atau "User"
+    }
 }

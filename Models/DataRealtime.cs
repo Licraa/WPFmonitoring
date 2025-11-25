@@ -1,29 +1,40 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace MonitoringApp.Models;
-
-public partial class DataRealtime
+namespace MonitoringApp.Models
 {
-    public int Id { get; set; }
+    // Class ini tidak jadi tabel, cuma template
+    public abstract class MachineDataBase
+    {
+        [Key]
+        public int Id { get; set; } // Kita matikan Auto Increment karena ID ikut tabel Line
 
-    public int? NilaiA0 { get; set; }
+        public int NilaiA0 { get; set; }
+        public int NilaiTerakhirA2 { get; set; }
+        public float DurasiTerakhirA4 { get; set; }
+        public float RataRataTerakhirA4 { get; set; }
+        public int PartHours { get; set; }
 
-    public int? NilaiTerakhirA2 { get; set; }
+        public TimeSpan DataCh1 { get; set; } // Downtime
+        public TimeSpan Uptime { get; set; }  // Uptime
 
-    public double? DurasiTerakhirA4 { get; set; }
+        public int P_DataCh1 { get; set; }
+        public int P_Uptime { get; set; }
 
-    public double? RatarataTerakhirA4 { get; set; }
+        public DateTime Last_Update { get; set; }
+    }
 
-    public int? Parthours { get; set; }
+    // Tabel-tabel asli
+    [Table("data_realtime")]
+    public class DataRealtime : MachineDataBase { }
 
-    public TimeOnly? DataCh1 { get; set; }
+    [Table("shift_1")]
+    public class Shift1 : MachineDataBase { }
 
-    public TimeOnly? Uptime { get; set; }
+    [Table("shift_2")]
+    public class Shift2 : MachineDataBase { }
 
-    public int PDatach1 { get; set; }
-
-    public int PUptime { get; set; }
-
-    public DateTime LastUpdate { get; set; }
+    [Table("shift_3")]
+    public class Shift3 : MachineDataBase { }
 }

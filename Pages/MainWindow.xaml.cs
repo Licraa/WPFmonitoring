@@ -10,41 +10,73 @@ using System.Windows.Threading;
 using MonitoringApp.Services;
 using MonitoringApp.ViewModels;
 
+// Gunakan Alias untuk Admin agar tidak bentrok dengan Namespace
+using AdminWindow = MonitoringApp.Pages.Admin;
+
 namespace MonitoringApp.Pages
 {
     public partial class MainWindow : Window
     {
         private readonly SummaryService _summaryService;
+        private readonly CsvLogService _csvService;
+
         private string? _selectedLine;
         private DispatcherTimer _refreshTimer;
         private bool _isUpdating = false;
-        private readonly CsvLogService _csvService;
-        
+
+        private string _userRole;
 
         private ObservableCollection<LineSummary> _dashboardCollection = new ObservableCollection<LineSummary>();
         private ObservableCollection<MachineDetailViewModel> _detailCollection = new ObservableCollection<MachineDetailViewModel>();
 
-        public MainWindow()
+        public MainWindow(string role = "Admin")
         {
+
+            _userRole = role;
+
+            ConfigureAccessControl();
+
+
             InitializeComponent();
 
+            // 1. Init Database Service
             var db = new DatabaseService();
             _summaryService = new SummaryService(db);
 
+            // 2. Init CSV Service (untuk download excel)
+            _csvService = new CsvLogService();
+
+            // 3. Binding Data ke UI
             cardContainer.ItemsSource = _dashboardCollection;
             mesinListView.ItemsSource = _detailCollection;
 
-            _csvService = new CsvLogService();
-
+            // 4. Init Timer Refresh (1 detik)
             _refreshTimer = new DispatcherTimer();
             _refreshTimer.Interval = TimeSpan.FromMilliseconds(1000);
             _refreshTimer.Tick += RefreshTimer_Tick;
 
+            // 5. Tampilan Awal (Dashboard)
             ShowDashboard();
 
+            // 6. Mulai Timer
             _refreshTimer.Start();
         }
 
+        private void ConfigureAccessControl()
+        {
+            // Jika yang login BUKAN Admin, sembunyikan menu "Admin Panel"
+            if (_userRole != "Admin")
+            {
+                // Kita cari item menu di dalam HamburgerMenu
+                // Item pertama (index 0) adalah Admin Panel
+                if (HamburgerMenu.Items.Count > 0 && HamburgerMenu.Items[0] is MenuItem adminItem)
+                {
+                    adminItem.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        // --- LOGIKA TIMER ---
         private async void RefreshTimer_Tick(object? sender, EventArgs e)
         {
             if (_isUpdating) return;
@@ -71,6 +103,7 @@ namespace MonitoringApp.Pages
             }
         }
 
+        // --- UPDATE DATA DASHBOARD ---
         private async Task UpdateDashboardDataAsync()
         {
             var newDataList = await Task.Run(() => _summaryService.GetLineSummary());
@@ -113,6 +146,7 @@ namespace MonitoringApp.Pages
             DashboardPanel.DataContext = new { TotalMachine = totalMachine, Active = totalActive, Inactive = totalInactive };
         }
 
+        // --- UPDATE DATA DETAIL ---
         private async Task UpdateDetailDataAsync()
         {
             if (_selectedLine == null) return;
@@ -125,15 +159,29 @@ namespace MonitoringApp.Pages
 
                 if (existingItem != null)
                 {
+                    bool isChanged = existingItem.IsDifferentFrom(newItem);
+
+
                     existingItem.LastUpdate = newItem.LastUpdate;
                     existingItem.PartHours = newItem.PartHours;
                     existingItem.Cycle = newItem.Cycle;
                     existingItem.AvgCycle = newItem.AvgCycle;
                     existingItem.NilaiA0 = newItem.NilaiA0;
+                    existingItem.Remark = newItem.Remark; // Update Remark
+
+                    if (existingItem.Shift1 == null) existingItem.Shift1 = new ShiftSummaryViewModel();
+                    if (existingItem.Shift2 == null) existingItem.Shift2 = new ShiftSummaryViewModel();
+                    if (existingItem.Shift3 == null) existingItem.Shift3 = new ShiftSummaryViewModel();
 
                     UpdateShiftData(existingItem.Shift1, newItem.Shift1);
                     UpdateShiftData(existingItem.Shift2, newItem.Shift2);
                     UpdateShiftData(existingItem.Shift3, newItem.Shift3);
+
+                    if (isChanged)
+                    {
+                        existingItem.TriggerFlash();
+                    }
+
                 }
                 else
                 {
@@ -172,6 +220,8 @@ namespace MonitoringApp.Pages
             target.UptimePercent = source.UptimePercent;
         }
 
+        // --- NAVIGATION HELPERS ---
+
         private async void ShowDashboard()
         {
             DashboardPanel.Visibility = Visibility.Visible;
@@ -195,6 +245,9 @@ namespace MonitoringApp.Pages
             await UpdateDetailDataAsync();
         }
 
+        // --- EVENT HANDLERS ---
+
+        // 1. Klik Kartu Line di Dashboard -> Masuk Detail
         private void Card_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is Border border && border.DataContext is ViewModels.LineSummary summary)
@@ -203,72 +256,37 @@ namespace MonitoringApp.Pages
             }
         }
 
+        // 2. Klik Tombol Back -> Balik Dashboard
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
             ShowDashboard();
         }
 
-        // --- FUNGSI BARU: BUKA ADMIN WINDOW ---
-        private void BtnOpenAdmin_Click(object sender, RoutedEventArgs e)
-        {
-            // Menggunakan .Show() agar window MainWindow tetap bisa diakses (tidak modal)
-            var adminWindow = new Admin();
-            adminWindow.Show();
-        }
-
+        // 3. Klik Tombol Hamburger -> Buka Context Menu
         private void BtnHamburger_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.ContextMenu != null)
             {
-                btn.ContextMenu.PlacementTarget = btn; // Agar menu muncul pas di bawah tombol
+                btn.ContextMenu.PlacementTarget = btn;
                 btn.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
                 btn.ContextMenu.IsOpen = true;
             }
         }
 
-        private void BtnDownloadExcel_Click(object sender, RoutedEventArgs e)
+        // 4. Menu: Buka Admin Panel
+        private void BtnOpenAdmin_Click(object sender, RoutedEventArgs e)
         {
-            try 
-            {
-                // Ambil info shift saat ini
-                var info = _csvService.GetCurrentShiftInfo();
-                
-                // Beri feedback loading (cursor wait)
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                // Jalankan di background biar UI tidak macet
-                Task.Run(() => 
-                {
-                    // Generate Excel dari data CSV terkini
-                    _csvService.FinalizeExcel(info.shiftName, info.shiftDate);
-                    
-                    // Balik ke UI Thread untuk tampilkan pesan sukses
-                    Application.Current.Dispatcher.Invoke(() => 
-                    {
-                        Mouse.OverrideCursor = null;
-                        string path = _csvService.GetCsvPath(info.shiftDate, info.shiftName).Replace(".csv", ".xlsx");
-                        
-                        MessageBoxResult result = MessageBox.Show(
-                            $"Excel Report Generated Successfully!\n\nShift: {info.shiftName}\nLocation: {path}\n\nDo you want to open the folder?", 
-                            "Export Success", 
-                            MessageBoxButton.YesNo, 
-                            MessageBoxImage.Information);
-
-                        if (result == MessageBoxResult.Yes)
-                        {
-                            // Buka folder di File Explorer
-                            string folder = System.IO.Path.GetDirectoryName(path);
-                            System.Diagnostics.Process.Start("explorer.exe", folder);
-                        }
-                    });
-                });
-            }
-            catch (Exception ex)
-            {
-                Mouse.OverrideCursor = null;
-                MessageBox.Show($"Failed to export Excel: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            var admin = new AdminWindow();
+            admin.Show();
         }
 
+        // 5. Menu: Buka Report History Explorer (File Explorer)
+        private void BtnDownloadExcel_Click(object sender, RoutedEventArgs e)
+        {
+            // Buka window explorer yang sudah kita buat sebelumnya
+            var history = new ReportHistoryWindow();
+            history.Owner = this;
+            history.Show();
+        }
     }
 }
