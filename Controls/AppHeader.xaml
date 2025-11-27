@@ -8,12 +8,16 @@
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="300"/>
         </Grid.ColumnDefinitions>
-       <Image Source="/MonitoringApp;component/Assets/CCI.jpg" Grid.Column="0" Height="60" VerticalAlignment="Center"/>
+        
+        <Image Source="/MonitoringApp;component/Assets/CCI.jpg" Grid.Column="0" Height="60" VerticalAlignment="Center"/>
+        
         <TextBlock Grid.Column="1" Text="MACHINE UPTIME MONITORING" Foreground="White" FontSize="34" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        
         <Border Grid.Column="2" Background="#1A76A3" CornerRadius="10" Padding="10" VerticalAlignment="Center">
             <StackPanel>
-                <TextBlock Text="Monday, November 17, 2025" Foreground="White" FontSize="16" HorizontalAlignment="Center"/>
-                <TextBlock Text="10:00:04" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="TxtDate" Foreground="White" FontSize="16" HorizontalAlignment="Center"/>
+                
+                <TextBlock x:Name="TxtTime" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
     </Grid>
