@@ -123,25 +123,47 @@ namespace MonitoringApp.Pages
 
             foreach (var line in lines)
             {
-                // 1. Parsing Data (Strict Mode)
+                // Ini untuk melihat apakah data mentah dari Arduino masuk atau tidak
+                if (_isLiveLogEnabled) 
+                {
+                     LogToUI($"RAW: {line}");
+                }
                 var result = _dataProcessingService.ProcessRawData(line);
 
-                if (!string.IsNullOrEmpty(result.ErrorMessage))
+                if (!string.IsNullOrEmpty(result.ErrorMessage) && _isLiveLogEnabled)
                 {
-                    // Opsional: Log error parsing jika perlu debugging
-                    // LogToUI($"Parse Error: {result.ErrorMessage}");
-                    continue;
+                     LogToUI($"PARSE ERROR: {result.ErrorMessage}", true);
                 }
 
                 if (result.IsValid && !result.IsDuplicate)
                 {
-                    // 2. Simpan Data (SQL & CSV)
+                    // 2. Simpan Data (Background Task)
                     SaveToDatabase(result.IdKey, result.ParsedData);
-
-                    // 3. Update Log UI
-                    LogToUI($"Data Saved - ID {result.IdKey}: {string.Join(",", result.ParsedData.Skip(1))}");
+        
+                    // 3. Log Data Sukses (HANYA JIKA DICENTANG)
+                    if (_isLiveLogEnabled)
+                    {
+                        LogToUI($"SAVED: ID={result.IdKey} | A2={result.ParsedData[2]}");
+                    }
                 }
             }
+        }
+
+        // Variabel flag untuk performa tinggi
+        private volatile bool _isLiveLogEnabled = false; 
+        
+        // Event saat CheckBox dicentang
+        private void ChkShowLog_Checked(object sender, RoutedEventArgs e)
+        {
+            _isLiveLogEnabled = true;
+            LogToUI("[SYSTEM] Debug Mode: ON (Performance may decrease)");
+        }
+        
+        // Event saat CheckBox dilepas
+        private void ChkShowLog_Unchecked(object sender, RoutedEventArgs e)
+        {
+            _isLiveLogEnabled = false;
+            LogToUI("[SYSTEM] Debug Mode: OFF (Performance optimized)");
         }
 
         private void SaveToDatabase(int idKey, object[] data)
