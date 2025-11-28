@@ -21,6 +21,8 @@ namespace MonitoringApp.Pages
         private DataProcessingService _dataProcessingService;
         private CsvLogService _csvService;
 
+        private MachineService _machineService;
+
         // --- State & Timers ---
         private DispatcherTimer _clockTimer;
         private bool _subscribed = false;
@@ -45,6 +47,7 @@ namespace MonitoringApp.Pages
             _serialService = existingService ?? new SerialPortService();
             _dataProcessingService = new DataProcessingService();
             _csvService = new CsvLogService(); // Service baru untuk CSV/Excel
+            _machineService = new MachineService();
 
             InitPorts();
             InitializeDatabaseServices();
@@ -146,69 +149,96 @@ namespace MonitoringApp.Pages
 
         private void SaveToDatabase(int idKey, object[] data)
         {
-            if (_realtimeService == null)
-            {
-                LogFilteredData($"DB Error: Service not init. ID {idKey} skipped.");
-                return;
-            }
-
+            // Pastikan service database sudah siap
+            if (_realtimeService == null) return;
+        
             try
             {
+                // Pastikan jumlah data lengkap (sesuai format parsing di DataProcessingService)
                 if (data.Length >= 10)
                 {
-                    // Safety Check: Pastikan tidak ada data NULL
-                    for (int i = 0; i < 10; i++)
-                    {
-                        if (data[i] == null) { LogFilteredData($"Data ID {idKey} Index {i} is NULL. Skipped."); return; }
-                    }
-
-                    // A. SIMPAN KE SQL SERVER
+                    // =================================================================
+                    // A. SIMPAN KE SQL SERVER (Utama)
+                    // =================================================================
+                    // Kita biarkan ini berjalan di thread utama (atau bisa di-async-kan di service)
+                    // agar urutan data terjamin masuk ke database.
                     _realtimeService.SaveToDatabase(
                         idKey,
-                        (int)data[1],   // nilaiA0
-                        (int)data[2],   // nilaiTerakhirA2
-                        (float)data[3], // durasiTerakhirA4
-                        (float)data[4], // ratarataTerakhirA4
-                        (int)data[5],   // parthours
-                        (float)data[6], // dataCh1 (Service convert ke Time)
-                        (float)data[7], // uptime (Service convert ke Time)
-                        (int)data[8],   // p_datach1
-                        (int)data[9]    // p_uptime
+                        (int)data[1],   // NilaiA0 (Status Mesin)
+                        (int)data[2],   // NilaiTerakhirA2 (Total Count)
+                        (float)data[3], // DurasiTerakhirA4 (Cycle Time)
+                        (float)data[4], // RataRataTerakhirA4 (Avg Cycle)
+                        (int)data[5],   // PartHours
+                        (float)data[6], // DataCh1 (Downtime dalam detik)
+                        (float)data[7], // Uptime (Uptime dalam detik)
+                        (int)data[8],   // P_DataCh1 (Persen Downtime)
+                        (int)data[9]    // P_Uptime (Persen Uptime)
                     );
-
-                    // B. SIMPAN KE CSV (Ringan)
-                    // Ambil Metadata Mesin (Nama, Line, Process)
-                    var meta = GetMachineInfoById(idKey);
-
-                    // Hitung status & waktu string
-                    string status = ((int)data[1]) == 1 ? "Active" : "Inactive";
-                    string tsDown = TimeSpan.FromSeconds((float)data[6]).ToString(@"hh\:mm\:ss");
-                    string tsUp = TimeSpan.FromSeconds((float)data[7]).ToString(@"hh\:mm\:ss");
-
-                    _csvService.LogDataToCsv(
-                        id: idKey,
-                        name: meta.Name,
-                        line: meta.Line,
-                        process: meta.Process,
-                        status: status,
-                        count: (int)data[2],
-                        cycle: (float)data[3],
-                        avgCycle: (float)data[4],
-                        partHours: (int)data[5],
-                        downtime: tsDown,
-                        uptime: tsUp
-                    );
-
-                    LogFilteredData($"ID {idKey} saved (SQL+CSV).");
+        
+                    // =================================================================
+                    // B. SIMPAN KE CSV/EXCEL (Background Task)
+                    // =================================================================
+                    // Kita bungkus dalam Task.Run agar proses penulisan file (Disk I/O)
+                    // yang lambat TIDAK memacetkan penerimaan data Serial Port.
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            // 1. Ambil Info Mesin dari Cache (Super Cepat, tidak query DB berulang)
+                            // Pastikan Anda sudah menginisialisasi _machineService di Constructor
+                            var meta = _machineService.GetMachineInfoCached(idKey);
+        
+                            // 2. Format Data untuk CSV
+                            string status = ((int)data[1]) == 1 ? "Active" : "Inactive";
+                            
+                            // Konversi detik ke format jam (HH:mm:ss)
+                            string tsDown = TimeSpan.FromSeconds((float)data[6]).ToString(@"hh\:mm\:ss");
+                            string tsUp = TimeSpan.FromSeconds((float)data[7]).ToString(@"hh\:mm\:ss");
+        
+                            // 3. Tulis ke File
+                            _csvService.LogDataToCsv(
+                                id: idKey,
+                                name: meta.Name,
+                                line: meta.Line,
+                                process: meta.Process,
+                                status: status,
+                                count: (int)data[2],
+                                cycle: (float)data[3],
+                                avgCycle: (float)data[4],
+                                partHours: (int)data[5],
+                                downtime: tsDown,
+                                uptime: tsUp
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            // Error di background thread sebaiknya tidak mengganggu UI, 
+                            // kecuali mode debug menyala
+                            if (_isLiveLogEnabled)
+                            {
+                                 // Gunakan Dispatcher karena ini berjalan di background thread
+                                 Application.Current.Dispatcher.Invoke(() => 
+                                     LogToUI($"CSV Background Error: {ex.Message}"));
+                            }
+                        }
+                    });
                 }
                 else
                 {
-                    LogFilteredData($"ID {idKey} incomplete data.");
+                    // Data tidak lengkap (kurang dari 10 item), abaikan atau log debug
+                    if (_isLiveLogEnabled)
+                    {
+                        LogToUI($"Skipped ID {idKey}: Incomplete data length ({data.Length})");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                LogFilteredData($"Save Error ID {idKey}: {ex.Message}");
+                // Tangkap error kritis pada penyimpanan Database
+                if (_isLiveLogEnabled)
+                {
+                    LogToUI($"Save Error ID {idKey}: {ex.Message}");
+                }
             }
         }
 
