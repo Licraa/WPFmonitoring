@@ -77,6 +77,17 @@
                     <Button x:Name="btnClear" Content="🗑 CLEAR" Background="#6B7280" Click="BtnClear_Click" Style="{StaticResource ActionBtn}" Width="64" Height="24"/>
                 </StackPanel>
 
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                    <CheckBox x:Name="chkShowLog" 
+                              Content="Show Live Log (Debug)" 
+                              Foreground="#6B7280" 
+                              FontSize="12" 
+                              FontWeight="SemiBold"
+                              VerticalContentAlignment="Center"
+                              Checked="ChkShowLog_Checked"
+                              Unchecked="ChkShowLog_Unchecked"/>
+                </StackPanel>
+
                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
                     <TextBlock Text="CONNECTION STATUS" FontSize="10" FontWeight="Bold" Foreground="#9CA3AF"/>
                     <TextBlock x:Name="txtStatus" Text="Idle" FontWeight="Bold" Foreground="#374151" FontSize="14" HorizontalAlignment="Right"/>
