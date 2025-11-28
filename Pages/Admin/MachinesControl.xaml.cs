@@ -121,9 +121,9 @@ namespace MonitoringApp.Pages
                 // 2. Buka Window Edit (sebagai Dialog/Popup)
                 var editWindow = new EditMachineWindow(selectedMachine);
                 editWindow.Owner = Window.GetWindow(this); // Agar muncul di tengah window induk
-
+        
                 editWindow.ShowDialog(); // Tunggu sampai user tutup window
-
+        
                 // 3. Cek apakah user menekan Save?
                 if (editWindow.IsSaved)
                 {
@@ -135,24 +135,29 @@ namespace MonitoringApp.Pages
                         editWindow.NewLine,
                         editWindow.NewRemark
                     );
-
+        
                     if (success)
                     {
+                        // =========================================================
+                        // PENTING: Bersihkan Cache Service agar SerialMonitor
+                        // segera mengenali nama mesin yang baru.
+                        // =========================================================
+                        _service.ClearCache(); 
+        
                         MessageBox.Show("Machine updated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-
+        
                         // 5. Refresh Data UI
                         LoadData();
-
-                        // Kembalikan view ke Line yang sedang dibuka (agar tidak reset ke halaman depan)
-                        // Kita perlu trigger klik ulang secara manual atau filter ulang list
-                        // Cara simpel: Filter ulang _allDataCache berdasarkan Line yang tadi aktif
-
+        
+                        // 6. Refresh Tampilan Detail (agar tidak kembali ke menu utama)
+                        // Jika user sedang melihat list mesin di line tertentu, update list itu
                         if (!string.IsNullOrEmpty(txtSelectedLine.Text))
                         {
                             var updatedMachines = _allDataCache
-                                 .Where(m => m.Line == txtSelectedLine.Text) // Gunakan nama line baru jika diedit
+                                 .Where(m => m.Line == txtSelectedLine.Text) // Filter berdasarkan Line yang sedang dibuka
                                  .OrderBy(m => m.Id)
                                  .ToList();
+        
                             ListMachines.ItemsSource = updatedMachines;
                         }
                     }
@@ -205,24 +210,29 @@ namespace MonitoringApp.Pages
                     "Confirm Delete",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
-
+        
                 if (result == MessageBoxResult.Yes)
                 {
                     // 3. Panggil Service Delete
                     bool success = _service.DeleteMachine(selectedMachine.Id);
-
+        
                     if (success)
                     {
+                        // =========================================================
+                        // PENTING: Bersihkan Cache Service agar SerialMonitor
+                        // tidak lagi mengenali ID mesin yang sudah dihapus.
+                        // =========================================================
+                        _service.ClearCache();
+        
                         MessageBox.Show("Machine deleted successfully.", "Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
                         
-                        // 4. Refresh Data UI
+                        // 4. Refresh Data UI (Ambil ulang dari DB)
                         LoadData();
-
-                        // Jika user sedang membuka detail line yang mesinnya dihapus, refresh list detailnya juga
+        
+                        // 5. Refresh Tampilan Detail (jika sedang terbuka)
                         if (!string.IsNullOrEmpty(txtSelectedLine.Text))
                         {
-                            // Refresh tampilan detail (panggil event klik line ulang secara manual atau filter ulang)
-                            // Cara simpel: Filter ulang _allDataCache yang baru di-load
+                            // Ambil data terbaru dari cache lokal (_allDataCache) yang baru di-LoadData()
                             var machinesInLine = _allDataCache
                                 .Where(m => m.Line == txtSelectedLine.Text)
                                 .OrderBy(m => m.Id)
@@ -230,6 +240,12 @@ namespace MonitoringApp.Pages
                                 
                             ListMachines.ItemsSource = machinesInLine;
                             txtTotalMachinesDetail.Text = $"{machinesInLine.Count} Machines";
+                            
+                            // Opsional: Jika mesin habis, bisa kembali ke tampilan line
+                            if (machinesInLine.Count == 0)
+                            {
+                                BtnBack_Click(null, null); // Kembali ke menu utama
+                            }
                         }
                     }
                     else
