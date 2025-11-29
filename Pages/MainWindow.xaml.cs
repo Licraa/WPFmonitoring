@@ -40,8 +40,7 @@ namespace MonitoringApp.Pages
             InitializeComponent();
 
             // 1. Init Database Service
-            var db = new DatabaseService();
-            _summaryService = new SummaryService(db);
+            _summaryService = new SummaryService();
 
             // 2. Init CSV Service (untuk download excel)
             _csvService = new CsvLogService();

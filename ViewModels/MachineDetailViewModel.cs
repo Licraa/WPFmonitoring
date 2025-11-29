@@ -115,37 +115,22 @@ namespace MonitoringApp.ViewModels
         {
             if (newData == null) return false;
 
-            // --- LOGIKA BARU: HANYA BLINK JIKA PENTING ---
+            // --- LOGIKA ALA JAVASCRIPT ---
+            // Karena di SummaryService kita sudah pakai format ".fff" (milidetik),
+            // String LastUpdate akan SELALU BEDA setiap kali ada data baru dari Arduino.
 
-            // 1. Cek Status Mesin (Penting: Blink jika Mesin Mati/Nyala)
-            if (this.NilaiA0 != newData.NilaiA0)
+            string timeOld = this.LastUpdate ?? "";
+            string timeNew = newData.LastUpdate ?? "";
+
+            // Cukup bandingkan stringnya saja. 
+            // "10:00:05.100" != "10:00:05.600" -> Pasti TRUE -> Pasti BLINK.
+            if (timeOld != timeNew)
             {
-                // Debugging: Lihat output window biar tau kenapa blink
-                System.Diagnostics.Debug.WriteLine($"[BLINK] Status Berubah: {this.NilaiA0} -> {newData.NilaiA0}");
                 return true;
             }
 
-            // 2. Cek Jumlah Produksi (Penting: Blink jika ada barang baru)
-            // Gunakan '?? 0' untuk jaga-jaga kalau null
-            int count1 = this.Shift1?.Count ?? 0;
-            int newCount1 = newData.Shift1?.Count ?? 0;
-
-            int count2 = this.Shift2?.Count ?? 0;
-            int newCount2 = newData.Shift2?.Count ?? 0;
-
-            int count3 = this.Shift3?.Count ?? 0;
-            int newCount3 = newData.Shift3?.Count ?? 0;
-
-            if (count1 != newCount1 || count2 != newCount2 || count3 != newCount3)
-            {
-                System.Diagnostics.Debug.WriteLine($"[BLINK] Count Berubah!");
-                return true;
-            }
-
-            // --- KITA ABAIKAN LastUpdate ---
-            // Jangan blink cuma gara-gara jam berubah. 
-            // Data jam tetap akan ter-update di layar (karena ada kode update di MainWindow),
-            // tapi tidak akan memicu animasi flash kuning.
+            // Opsional: Cek status jika jam kebetulan sama (sangat jarang terjadi sekarang)
+            if (this.NilaiA0 != newData.NilaiA0) return true;
 
             return false;
         }

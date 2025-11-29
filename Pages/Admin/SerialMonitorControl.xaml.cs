@@ -16,7 +16,7 @@ namespace MonitoringApp.Pages
     {
         // --- Services ---
         private SerialPortService _serialService;
-        private DatabaseService? _dbService;
+        //private DatabaseService? _dbService;
         private RealtimeDataService? _realtimeService;
         private DataProcessingService _dataProcessingService;
         private CsvLogService _csvService;

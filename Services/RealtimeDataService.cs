@@ -1,18 +1,21 @@
 using System;
-using Microsoft.Data.SqlClient;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using MonitoringApp.Data;
+using MonitoringApp.Models;
 
 namespace MonitoringApp.Services
 {
     public class RealtimeDataService
     {
-        private readonly string _connectionString;
+        private readonly AppDbContext _context;
 
         public RealtimeDataService(string connectionString)
         {
-            _connectionString = connectionString;
+            // Kita abaikan connectionString string karena kita pakai Factory EF Core
+            _context = new AppDbContextFactory().CreateDbContext(null);
         }
 
-        // PERUBAHAN: dataCh1 dan uptime sekarang menerima float (detik)
         public void SaveToDatabase(
             int id,
             int nilaiA0,
@@ -20,75 +23,92 @@ namespace MonitoringApp.Services
             float durasiTerakhirA4,
             float ratarataTerakhirA4,
             int parthours,
-            float dataCh1_Sec,   // Input Float (Detik)
-            float uptime_Sec,    // Input Float (Detik)
+            float dataCh1_Sec,
+            float uptime_Sec,
             int p_datach1,
             int p_uptime)
         {
-            // Konversi Float (Detik) ke TimeSpan (Jam:Menit:Detik)
-            TimeSpan ts_dataCh1 = TimeSpan.FromSeconds(dataCh1_Sec);
-            TimeSpan ts_uptime = TimeSpan.FromSeconds(uptime_Sec);
+            try
+            {
+                // Konversi Detik ke TimeSpan
+                TimeSpan ts_dataCh1 = TimeSpan.FromSeconds(dataCh1_Sec);
+                TimeSpan ts_uptime = TimeSpan.FromSeconds(uptime_Sec);
 
-            // Simpan ke tabel utama
-            SaveToTable("data_realtime", id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+                // 1. Simpan ke Tabel Utama (DataRealtime)
+                UpsertData(_context.DataRealtimes, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
 
-            // Simpan ke tabel Shift
-            string shiftTable = GetShiftTableName();
-            SaveToTable(shiftTable, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+                // 2. Simpan ke Tabel Shift yang Sesuai
+                SaveToShiftTable(id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+
+                _context.SaveChanges(); // Eksekusi semua perubahan ke DB sekaligus
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
+            }
         }
 
-        private string GetShiftTableName()
+        // Helper untuk memilih tabel Shift berdasarkan jam
+        private void SaveToShiftTable(int id, int a0, int a2, float a4, float avgA4, int ph, TimeSpan ch1, TimeSpan up, int pCh1, int pUp)
         {
             TimeSpan now = DateTime.Now.TimeOfDay;
-            if (now >= new TimeSpan(6, 30, 0) && now < new TimeSpan(14, 30, 0)) return "shift_1";
-            if (now >= new TimeSpan(14, 30, 0) && now < new TimeSpan(22, 30, 0)) return "shift_2";
-            return "shift_3";
+
+            // Logika jam shift
+            if (now >= new TimeSpan(6, 30, 0) && now < new TimeSpan(14, 30, 0))
+            {
+                UpsertData(_context.Shift1s, id, a0, a2, a4, avgA4, ph, ch1, up, pCh1, pUp);
+            }
+            else if (now >= new TimeSpan(14, 30, 0) && now < new TimeSpan(22, 30, 0))
+            {
+                UpsertData(_context.Shift2s, id, a0, a2, a4, avgA4, ph, ch1, up, pCh1, pUp);
+            }
+            else
+            {
+                UpsertData(_context.Shift3s, id, a0, a2, a4, avgA4, ph, ch1, up, pCh1, pUp);
+            }
         }
 
-        private void SaveToTable(
-            string tableName,
-            int id, int nilaiA0, int nilaiTerakhirA2, float durasiTerakhirA4, float ratarataTerakhirA4,
-            int parthours, TimeSpan dataCh1, TimeSpan uptime, int p_datach1, int p_uptime)
+        // Generic Method untuk melakukan UPSERT (Update or Insert) ke tabel manapun (Realtime/Shift)
+        private void UpsertData<T>(DbSet<T> dbSet, int id, int a0, int a2, float a4, float avgA4, int ph, TimeSpan ch1, TimeSpan up, int pCh1, int pUp)
+            where T : MachineDataBase, new()
         {
-            string query = $@"
-                SET IDENTITY_INSERT {tableName} ON;
-                MERGE INTO {tableName} AS target
-                USING (SELECT @id AS id) AS source
-                ON target.id = source.id
-                WHEN MATCHED THEN
-                    UPDATE SET
-                        nilaiA0 = @nilaiA0,
-                        nilaiTerakhirA2 = @nilaiTerakhirA2,
-                        durasiTerakhirA4 = @durasiTerakhirA4,
-                        ratarataTerakhirA4 = @ratarataTerakhirA4,
-                        parthours = @parthours,
-                        dataCh1 = @dataCh1,
-                        uptime = @uptime,
-                        p_datach1 = @p_datach1,
-                        p_uptime = @p_uptime,
-                        last_update = GETDATE()
-                WHEN NOT MATCHED THEN
-                    INSERT (id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, dataCh1, uptime, p_datach1, p_uptime, last_update)
-                    VALUES (@id, @nilaiA0, @nilaiTerakhirA2, @durasiTerakhirA4, @ratarataTerakhirA4, @parthours, @dataCh1, @uptime, @p_datach1, @p_uptime, GETDATE());
-                SET IDENTITY_INSERT {tableName} OFF;
-            ";
+            // Cek apakah data sudah ada?
+            var existingData = dbSet.FirstOrDefault(x => x.Id == id);
 
-            using (var conn = new SqlConnection(_connectionString))
-            using (var cmd = new SqlCommand(query, conn))
+            if (existingData != null)
             {
-                cmd.Parameters.AddWithValue("@id", id);
-                cmd.Parameters.AddWithValue("@nilaiA0", nilaiA0);
-                cmd.Parameters.AddWithValue("@nilaiTerakhirA2", nilaiTerakhirA2);
-                cmd.Parameters.AddWithValue("@durasiTerakhirA4", durasiTerakhirA4);
-                cmd.Parameters.AddWithValue("@ratarataTerakhirA4", ratarataTerakhirA4);
-                cmd.Parameters.AddWithValue("@parthours", parthours);
-                cmd.Parameters.AddWithValue("@dataCh1", dataCh1);
-                cmd.Parameters.AddWithValue("@uptime", uptime);
-                cmd.Parameters.AddWithValue("@p_datach1", p_datach1);
-                cmd.Parameters.AddWithValue("@p_uptime", p_uptime);
+                // UPDATE
+                existingData.NilaiA0 = a0;
+                existingData.NilaiTerakhirA2 = a2;
+                existingData.DurasiTerakhirA4 = a4;
+                existingData.RataRataTerakhirA4 = avgA4;
+                existingData.PartHours = ph;
+                existingData.DataCh1 = ch1;
+                existingData.Uptime = up;
+                existingData.P_DataCh1 = pCh1;
+                existingData.P_Uptime = pUp;
+                existingData.Last_Update = DateTime.Now;
 
-                try { conn.Open(); cmd.ExecuteNonQuery(); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Error saving to {tableName}: {ex.Message}"); throw; }
+                _context.Entry(existingData).State = EntityState.Modified;
+            }
+            else
+            {
+                // INSERT
+                var newData = new T
+                {
+                    Id = id, // ID Manual, tidak auto increment
+                    NilaiA0 = a0,
+                    NilaiTerakhirA2 = a2,
+                    DurasiTerakhirA4 = a4,
+                    RataRataTerakhirA4 = avgA4,
+                    PartHours = ph,
+                    DataCh1 = ch1,
+                    Uptime = up,
+                    P_DataCh1 = pCh1,
+                    P_Uptime = pUp,
+                    Last_Update = DateTime.Now
+                };
+                dbSet.Add(newData);
             }
         }
     }

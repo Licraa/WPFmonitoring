@@ -1,48 +1,27 @@
-﻿using System;
-using Microsoft.Data.SqlClient; // Pastikan pakai Microsoft.Data.SqlClient sesuai setup sebelumnya
+﻿using System.Linq;
+using MonitoringApp.Data;
+using MonitoringApp.Models;
 
 namespace MonitoringApp.Services
 {
     public class AuthService
     {
-        private readonly DatabaseService _dbService;
+        private readonly AppDbContext _context;
 
         public AuthService()
         {
-            _dbService = new DatabaseService();
+            // Inisialisasi Context
+            _context = new AppDbContextFactory().CreateDbContext(null);
         }
 
-        /// <summary>
-        /// Cek login. Mengembalikan string Role ('Admin'/'User') jika sukses, atau null jika gagal.
-        /// </summary>
         public string? Login(string username, string password)
         {
-            using (var conn = _dbService.GetConnection())
-            {
-                try
-                {
-                    conn.Open();
-                    string query = "SELECT Role FROM Users WHERE Username = @user AND Password = @pass";
+            // LINQ: Mencari user berdasarkan username & password
+            // Note: Di production, password harus di-hash, jangan plain text.
+            var user = _context.Users
+                .FirstOrDefault(u => u.Username == username && u.Password == password);
 
-                    using (var cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@user", username);
-                        cmd.Parameters.AddWithValue("@pass", password); // Di real app, hash password dulu di sini
-
-                        var result = cmd.ExecuteScalar();
-
-                        if (result != null)
-                        {
-                            return result.ToString(); // Kembalikan Role (misal: "Admin")
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine("Login Error: " + ex.Message);
-                }
-            }
-            return null; // Login gagal
+            return user?.Role; // Kembalikan Role jika user ditemukan, atau null jika tidak
         }
     }
 }

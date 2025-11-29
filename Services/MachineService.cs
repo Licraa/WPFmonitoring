@@ -1,205 +1,179 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
+using System.Linq; // Wajib untuk LINQ
+using Microsoft.EntityFrameworkCore; // Wajib untuk EF Core
+using MonitoringApp.Data;
+using MonitoringApp.Models;
 using MonitoringApp.ViewModels;
 
 namespace MonitoringApp.Services
 {
     public class MachineService
     {
-        private readonly DatabaseService _db;
+        // 1. Deklarasi Context Database (Pengganti DatabaseService)
+        private readonly AppDbContext _context;
+
+        // 2. Deklarasi Cache Memori
+        private readonly Dictionary<int, (string Name, string Line, string Process)> _machineCache = new();
 
         public MachineService()
         {
-            _db = new DatabaseService();
+            // Karena belum menggunakan Dependency Injection penuh di App.xaml.cs,
+            // kita inisialisasi Context secara manual menggunakan Factory yang sudah Anda buat.
+            _context = new AppDbContextFactory().CreateDbContext(null);
         }
 
-        // 1. UPDATE QUERY SELECT (Agar saat Admin dibuka, remark lama muncul)
+        // --- 1. GET ALL (READ) ---
         public List<MachineDetailViewModel> GetAllMachines()
         {
-            var list = new List<MachineDetailViewModel>();
-            using (var conn = _db.GetConnection())
-            {
-                try 
-                {
-                    conn.Open();
-                    string query = @"
-                        SELECT 
-                            l.id, 
-                            l.line_production, 
-                            l.name, 
-                            l.process, 
-                            l.remark,  -- JANGAN LUPA INI
-                            dr.NilaiA0, 
-                            dr.last_update
-                        FROM line l
-                        LEFT JOIN data_realtime dr ON l.id = dr.id
-                        ORDER BY l.line_production ASC, l.id ASC"; // Urutkan berdasarkan ID menaik
-
-                    using (var cmd = new SqlCommand(query, conn))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
+            // Menggunakan LINQ (Lebih bersih & aman daripada Raw SQL)
+            var query = from l in _context.Lines
+                        join dr in _context.DataRealtimes on l.Id equals dr.Id into joinedData
+                        from dr in joinedData.DefaultIfEmpty() // LEFT JOIN
+                        orderby l.LineProduction, l.Id
+                        select new MachineDetailViewModel
                         {
-                            var machine = new MachineDetailViewModel
-                            {
-                                Id = Convert.ToInt32(reader["id"]),
-                                Line = reader["line_production"].ToString(),
-                                Name = reader["name"].ToString(),
-                                Process = reader["process"].ToString(),
-                                Remark = reader["remark"] != DBNull.Value ? reader["remark"].ToString() : "", // Mapping
-                                NilaiA0 = reader["NilaiA0"] != DBNull.Value ? Convert.ToInt32(reader["NilaiA0"]) : 0
-                            };
-                            
-                            if (reader["last_update"] != DBNull.Value)
-                                machine.LastUpdate = Convert.ToDateTime(reader["last_update"]).ToString("yyyy-MM-dd HH:mm:ss");
-                            else
-                                machine.LastUpdate = "-";
+                            Id = l.Id,
+                            Line = l.LineProduction,
+                            Name = l.Name,
+                            Process = l.Process,
+                            Remark = l.Remark ?? "", // Handle null
 
-                            list.Add(machine);
-                        }
-                    }
-                }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
-            }
-            return list;
+                            // Ambil data realtime jika ada
+                            NilaiA0 = dr != null ? dr.NilaiA0 : 0,
+
+                            // Format tanggal
+                            LastUpdate = (dr != null) ? dr.Last_Update.ToString("yyyy-MM-dd HH:mm:ss") : "-"
+                        };
+
+            return query.ToList();
         }
 
-        // 2. UPDATE QUERY UPDATE (Agar tombol Save berfungsi)
-        public bool UpdateMachine(int id, string newName, string newProcess, string newLine, string newRemark)
+        // --- 2. UPDATE ---
+        public bool UpdateMachine(int id, string name, string process, string line, string remark)
         {
-            using (var conn = _db.GetConnection())
+            // Hapus cache agar data fresh saat diambil lagi
+            if (_machineCache.ContainsKey(id)) _machineCache.Remove(id);
+
+            try
             {
-                try
-                {
-                    conn.Open();
-                    string query = @"
-                        UPDATE line 
-                        SET name = @name, 
-                            process = @process, 
-                            line_production = @line,
-                            remark = @remark
-                        WHERE id = @id";
+                var entity = _context.Lines.FirstOrDefault(x => x.Id == id);
+                if (entity == null) return false;
 
-                    using (var cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@id", id);
-                        cmd.Parameters.AddWithValue("@name", newName);
-                        cmd.Parameters.AddWithValue("@process", newProcess);
-                        cmd.Parameters.AddWithValue("@line", newLine);
-                        // Handle null remark agar tidak error
-                        cmd.Parameters.AddWithValue("@remark", (object)newRemark ?? DBNull.Value);
+                entity.Name = name;
+                entity.Process = process;
+                entity.LineProduction = line;
+                entity.Remark = remark;
 
-                        int rows = cmd.ExecuteNonQuery();
-                        return rows > 0;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"Update Error: {ex.Message}");
-                    return false;
-                }
+                _context.SaveChanges(); // EF Core otomatis generate query UPDATE
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Update Error: {ex.Message}");
+                return false;
             }
         }
 
+        // --- 3. ADD (CREATE) ---
         public bool AddMachine(string name, string process, string line, string remark)
+        {
+            try
             {
-                using (var conn = _db.GetConnection())
+                var newMachine = new Line
                 {
-                    try
-                    {
-                        conn.Open();
-                        // Insert hanya ke tabel 'line'. Data realtime akan otomatis masuk nanti saat ada serial data.
-                        // 'line1' kita isi default '-' atau sesuaikan kebutuhan
-                        string query = @"
-                            INSERT INTO line (line, line_production, process, name, remark) 
-                            VALUES ('-', @line, @process, @name, @remark)";
+                    Name = name,
+                    Process = process,
+                    LineProduction = line,
+                    Remark = remark,
+                    // Line1 tidak diisi sesuai kode lama (atau default null)
+                };
 
-                        using (var cmd = new SqlCommand(query, conn))
-                        {
-                            cmd.Parameters.AddWithValue("@name", name);
-                            cmd.Parameters.AddWithValue("@process", process);
-                            cmd.Parameters.AddWithValue("@line", line);
-                            cmd.Parameters.AddWithValue("@remark", (object)remark ?? DBNull.Value);
+                _context.Lines.Add(newMachine);
+                _context.SaveChanges(); // EF Core otomatis generate query INSERT
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Add Error: {ex.Message}");
+                return false;
+            }
+        }
 
-                            int rows = cmd.ExecuteNonQuery();
-                            return rows > 0;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Windows.MessageBox.Show($"Add Error: {ex.Message}");
-                        return false;
-                    }
+        // --- 4. DELETE ---
+        public bool DeleteMachine(int id)
+        {
+            if (_machineCache.ContainsKey(id)) _machineCache.Remove(id);
+
+            using var transaction = _context.Database.BeginTransaction();
+            try
+            {
+                // Hapus Data Realtime Terkait
+                var realtimeData = _context.DataRealtimes.FirstOrDefault(x => x.Id == id);
+                if (realtimeData != null) _context.DataRealtimes.Remove(realtimeData);
+
+                // Hapus Data Shift Terkait
+                var shift1 = _context.Shift1s.FirstOrDefault(x => x.Id == id);
+                if (shift1 != null) _context.Shift1s.Remove(shift1);
+
+                var shift2 = _context.Shift2s.FirstOrDefault(x => x.Id == id);
+                if (shift2 != null) _context.Shift2s.Remove(shift2);
+
+                var shift3 = _context.Shift3s.FirstOrDefault(x => x.Id == id);
+                if (shift3 != null) _context.Shift3s.Remove(shift3);
+
+                // Hapus Mesin (Line)
+                var line = _context.Lines.FirstOrDefault(x => x.Id == id);
+                if (line != null)
+                {
+                    _context.Lines.Remove(line);
+                    _context.SaveChanges();
+                    transaction.Commit();
+                    return true;
                 }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                System.Diagnostics.Debug.WriteLine($"Delete Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        // --- 5. CACHING & INFO (Untuk Serial Monitor) ---
+        public (string Name, string Line, string Process) GetMachineInfoCached(int id)
+        {
+            // A. Cek Cache Memory
+            if (_machineCache.TryGetValue(id, out var cachedInfo))
+            {
+                return cachedInfo;
             }
 
-            public bool DeleteMachine(int id)
+            // B. Ambil dari DB via EF Core
+            try
             {
-                using (var conn = _db.GetConnection())
+                var machine = _context.Lines
+                    .Where(l => l.Id == id)
+                    .Select(l => new { l.Name, l.LineProduction, l.Process })
+                    .FirstOrDefault();
+
+                if (machine != null)
                 {
-                    try
-                    {
-                        conn.Open();
-                        
-                        // Kita gunakan Transaksi agar jika satu gagal, semua batal (Safety)
-                        using (var transaction = conn.BeginTransaction())
-                        {
-                            try
-                            {
-                                // 1. Hapus data realtime & shift terkait dulu (opsional, tergantung setting database)
-                                // Jika Database Anda sudah set "ON DELETE CASCADE", query ini tidak perlu.
-                                // Tapi untuk aman, kita tulis manual:
-                                
-                                using (var cmd = new SqlCommand("DELETE FROM data_realtime WHERE id = @id", conn, transaction))
-                                {
-                                    cmd.Parameters.AddWithValue("@id", id);
-                                    cmd.ExecuteNonQuery();
-                                }
-
-                                // Hapus data di tabel shift (shift_1, shift_2, shift_3)
-                                string[] shifts = { "shift_1", "shift_2", "shift_3" };
-                                foreach (var table in shifts)
-                                {
-                                    using (var cmd = new SqlCommand($"DELETE FROM {table} WHERE id = @id", conn, transaction))
-                                    {
-                                        cmd.Parameters.AddWithValue("@id", id);
-                                        cmd.ExecuteNonQuery();
-                                    }
-                                }
-
-                                // 2. Akhirnya, Hapus Mesin dari tabel induk (Line)
-                                using (var cmd = new SqlCommand("DELETE FROM line WHERE id = @id", conn, transaction))
-                                {
-                                    cmd.Parameters.AddWithValue("@id", id);
-                                    int rows = cmd.ExecuteNonQuery();
-                                    
-                                    // Jika berhasil, Commit transaksi
-                                    if (rows > 0)
-                                    {
-                                        transaction.Commit();
-                                        return true;
-                                    }
-                                    else
-                                    {
-                                        transaction.Rollback();
-                                        return false;
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                transaction.Rollback(); // Batalkan jika ada error di tengah jalan
-                                throw;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Delete Error: {ex.Message}");
-                        return false;
-                    }
+                    var result = (machine.Name ?? "Unknown", machine.LineProduction ?? "-", machine.Process ?? "-");
+                    _machineCache[id] = result; // Simpan ke cache
+                    return result;
                 }
             }
+            catch { /* Ignore error, return default */ }
+
+            return ("Unknown", "-", "-");
+        }
+
+        public void ClearCache()
+        {
+            _machineCache.Clear();
+        }
     }
 }
