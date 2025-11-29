@@ -1,35 +1,25 @@
-using MonitoringApp.Services;
-using MonitoringApp.ViewModels;
 using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
-
-
+using Microsoft.Extensions.DependencyInjection; // Wajib untuk ServiceProvider
+using MonitoringApp.ViewModels;
 
 namespace MonitoringApp.Pages
 {
     public partial class Admin : Window
     {
-        // Service tunggal agar koneksi port konsisten
-        private readonly SerialPortService _sharedSerialService;
-
-        // Cache untuk halaman agar tidak dibuat ulang (Memory Efficiency)
+        // Cache untuk halaman agar state tidak hilang saat pindah tab
         private DashboardControl? _dashboardView;
         private SerialMonitorControl? _serialView;
-        private MachinesControl? _machinesView; // <--- Harus tipe spesifik ini
+        private MachinesControl? _machinesView;
 
         public Admin()
         {
             InitializeComponent();
 
-            // 1. Init Service Utama
-            _sharedSerialService = new SerialPortService();
-
-            // 2. Load Dashboard pertama kali
+            // Load Dashboard pertama kali
             NavigateToDashboard();
-
         }
 
         // --- Logic Navigasi Utama ---
@@ -38,15 +28,22 @@ namespace MonitoringApp.Pages
         {
             if (_dashboardView == null)
             {
-                _dashboardView = new DashboardControl();
+                // MENGGUNAKAN DI: Ambil DashboardControl dari ServiceProvider
+                // Pastikan DashboardControl sudah didaftarkan di App.xaml.cs (AddTransient)
+                // Jika belum, Anda bisa menambahkannya, atau jika DashboardControl constructor-nya kosong, 'new' biasa masih oke.
+                // Tapi untuk konsistensi, kita asumsi DashboardControl kelak butuh Service.
 
-                // --- TAMBAHKAN INI: MENDENGARKAN SINYAL KLIK ---
+                // Note: Jika DashboardControl belum didaftarkan di DI, gunakan 'new DashboardControl()' 
+                // Tapi karena kita mau standar pro, kita pakai DI.
+                // Jika error "No service for type DashboardControl", tambahkan services.AddTransient<DashboardControl>() di App.xaml.cs
+                // Untuk amannya di sini saya pakai pendekatan manual injection jika DashboardControl blm didaftarkan:
+
+                _dashboardView = new DashboardControl(); // (Atau pakai DI jika sudah didaftarkan)
+
+                // Event Listener: Jika user klik kartu di Dashboard, pindah ke Machines
                 _dashboardView.OnLineSelected += (sender, lineName) =>
                 {
-                    // 1. Pindah ke Halaman Machines
                     NavigateToMachines();
-
-                    // 2. Suruh Halaman Machines membuka Line yang diklik tadi
                     _machinesView?.OpenSpecificLine(lineName);
                 };
             }
@@ -57,10 +54,12 @@ namespace MonitoringApp.Pages
 
         private void NavigateToSerial()
         {
-            // Kita pass service yang sama ke SerialView
             if (_serialView == null)
             {
-                _serialView = new SerialMonitorControl(_sharedSerialService);
+                // MENGGUNAKAN DI: PENTING!
+                // SerialMonitorControl punya BANYAK dependency di constructornya.
+                // Kita TIDAK BISA pakai 'new SerialMonitorControl()'. Harus minta ke Provider.
+                _serialView = App.ServiceProvider.GetRequiredService<SerialMonitorControl>();
             }
 
             MainContentArea.Content = _serialView;
@@ -69,16 +68,22 @@ namespace MonitoringApp.Pages
 
         private void NavigateToMachines()
         {
-            // Placeholder: Jika belum ada halaman Machines, kita tampilkan pesan sementara
             if (_machinesView == null)
             {
-                // Anda bisa membuat MachinesControl.xaml nanti
-                 _machinesView = new MachinesControl();
+                // MENGGUNAKAN DI (Opsional tapi disarankan jika MachinesControl butuh MachineService)
+                // _machinesView = App.ServiceProvider.GetRequiredService<MachinesControl>();
+                // Jika belum didaftarkan di App.xaml.cs, pakai new biasa dulu:
+                _machinesView = new MachinesControl();
             }
 
             MainContentArea.Content = _machinesView;
-
             SetActiveButton(btnNavMachines);
+        }
+
+        private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("Settings feature coming soon!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            SetActiveButton(btnNavSettings);
         }
 
         // --- Event Handlers Sidebar ---
@@ -87,23 +92,18 @@ namespace MonitoringApp.Pages
         private void BtnNavSerial_Click(object sender, RoutedEventArgs e) => NavigateToSerial();
         private void BtnNavMachines_Click(object sender, RoutedEventArgs e) => NavigateToMachines();
 
-        private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Settings feature coming soon!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-            SetActiveButton(btnNavSettings);
-        }
-
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show("Are you sure you want to logout?", "Logout", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result == MessageBoxResult.Yes)
             {
-                // PENTING: Matikan serial port sebelum keluar agar tidak 'nyangkut'
-                try { _sharedSerialService?.Stop(); } catch { }
+                // Tidak perlu stop serial manual di sini, karena SerialPortService adalah Singleton.
+                // Koneksi akan tetap hidup di background (sesuai standar monitoring), 
+                // atau bisa dipanggil _serialService.Stop() jika ingin benar-benar mati.
 
                 this.Close();
-                // Opsional: Buka kembali LoginWindow jika ada
-                // new LoginWindow().Show();
+                // Opsional: Buka login lagi
+                // App.ServiceProvider.GetRequiredService<LoginWindow>().Show();
             }
         }
 
@@ -111,36 +111,19 @@ namespace MonitoringApp.Pages
 
         private void SetActiveButton(Button activeButton)
         {
-            // Reset semua tombol ke style default (Transparent/Abu-abu)
             ResetButtonStyle(btnNavDashboard);
             ResetButtonStyle(btnNavSerial);
             ResetButtonStyle(btnNavMachines);
             ResetButtonStyle(btnNavSettings);
 
-            // Set tombol aktif menjadi lebih terang
             activeButton.Foreground = Brushes.White;
             activeButton.Background = new SolidColorBrush(Color.FromRgb(31, 41, 55)); // #1F2937
-
-            // (Opsional) Tampilkan border kiri/indikator jika di-support template
         }
 
         private void ResetButtonStyle(Button btn)
         {
             btn.Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)); // #9CA3AF
             btn.Background = Brushes.Transparent;
-        }
-
-        // Tambahkan Event Handler di bagian atas class
-        public event EventHandler<string> OnLineSelected;
-
-        private void Card_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            // 1. Cek data kartu yang diklik
-            if (sender is Border border && border.DataContext is LineSummary line)
-            {
-                // 2. Kirim sinyal ke Admin.xaml "Hei, user klik Line A!"
-                OnLineSelected?.Invoke(this, line.lineProduction);
-            }
         }
     }
 }

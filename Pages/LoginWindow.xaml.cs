@@ -1,7 +1,6 @@
 using System.Windows;
-using System.Windows.Input;
-using MonitoringApp.Pages;
-using MonitoringApp.Services; // Tambahkan ini
+using Microsoft.Extensions.DependencyInjection;
+using MonitoringApp.Services;
 
 namespace MonitoringApp.Pages
 {
@@ -9,16 +8,10 @@ namespace MonitoringApp.Pages
     {
         private readonly AuthService _authService;
 
-        public LoginWindow()
+        public LoginWindow(AuthService authService)
         {
             InitializeComponent();
-            _authService = new AuthService();
-
-            // Logika drag window
-            this.MouseLeftButtonDown += (sender, e) =>
-            {
-                if (e.ButtonState == MouseButtonState.Pressed) this.DragMove();
-            };
+            _authService = authService;
         }
 
         private void Login_Click(object sender, RoutedEventArgs e)
@@ -26,26 +19,23 @@ namespace MonitoringApp.Pages
             string username = txtUsername.Text;
             string password = txtPassword.Password;
 
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
-            {
-                MessageBox.Show("Username dan Password harus diisi!", "Peringatan", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // 1. Cek ke Database
             string? role = _authService.Login(username, password);
 
             if (role != null)
             {
-                // 2. Jika Sukses, Buka MainWindow sambil membawa Role
-                var mainWin = new MainWindow(role); // Kita akan modifikasi MainWindow sebentar lagi
+                // AMBIL SERVICE FACTORY DARI DI CONTAINER
+                var scopeFactory = App.ServiceProvider.GetRequiredService<IServiceScopeFactory>();
+                var csvService = App.ServiceProvider.GetRequiredService<CsvLogService>();
+
+                // PASSING FACTORY KE MAIN WINDOW
+                var mainWin = new MainWindow(role, scopeFactory, csvService);
                 mainWin.Show();
 
                 this.Close();
             }
             else
             {
-                MessageBox.Show("Username atau Password salah!", "Login Gagal", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Login Failed", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

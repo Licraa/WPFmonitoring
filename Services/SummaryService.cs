@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Data;
 using MonitoringApp.Models;
 using MonitoringApp.ViewModels;
-using Microsoft.EntityFrameworkCore;
 
 namespace MonitoringApp.Services
 {
@@ -12,37 +12,36 @@ namespace MonitoringApp.Services
     {
         private readonly AppDbContext _context;
 
-        // Ubah konstruktor agar menerima AppDbContext
-        // Jika dipanggil dari MainWindow.xaml.cs, pastikan passing AppDbContext atau buat baru
-        public SummaryService(DatabaseService? legacyDb = null)
+        // Constructor Injection: Menerima AppDbContext dari App.xaml.cs
+        public SummaryService(AppDbContext context)
         {
-            _context = new AppDbContextFactory().CreateDbContext(null);
+            _context = context;
         }
 
+        // --- 1. DASHBOARD SUMMARY (Group by Line) ---
         public List<LineSummary> GetLineSummary()
         {
-            // 1. Ambil data gabungan Line + DataRealtime
-            var query = from l in _context.Lines
-                        join dr in _context.DataRealtimes on l.Id equals dr.Id into joined
-                        from dr in joined.DefaultIfEmpty()
-                        select new { l.LineProduction, dr };
+            // Ambil data gabungan Line (Left Join) DataRealtime
+            // Kita tarik ke memori (.ToList()) karena GroupBy entity kompleks terkadang 
+            // lebih stabil dieksekusi di client-side untuk query agregasi custom.
+            var rawData = (from l in _context.Lines
+                           join dr in _context.DataRealtimes on l.Id equals dr.Id into joined
+                           from dr in joined.DefaultIfEmpty()
+                           select new { l.LineProduction, dr }).ToList();
 
-            // 2. Lakukan Grouping di memori (client-side evaluation) atau di DB
-            // Untuk memastikan akurasi data null, kita tarik dulu ke memori lalu group
-            var dataList = query.ToList();
-
-            var grouped = dataList
+            // Lakukan Grouping dan Agregasi
+            var result = rawData
                 .GroupBy(x => x.LineProduction)
                 .Select(g => new LineSummary
                 {
                     lineProduction = g.Key,
                     TotalMachine = g.Count(),
 
-                    // Hitung Active/Inactive berdasarkan NilaiA0
+                    // Logika Status: Active jika NilaiA0 == 1
                     Active = g.Count(x => x.dr != null && x.dr.NilaiA0 == 1),
                     Inactive = g.Count(x => x.dr == null || x.dr.NilaiA0 != 1),
 
-                    // Agregasi Data Lainnya
+                    // Agregasi Data Lainnya (Handle null dengan '?? 0')
                     Count = g.Sum(x => x.dr?.NilaiTerakhirA2 ?? 0),
                     Cycle = g.Sum(x => (double)(x.dr?.DurasiTerakhirA4 ?? 0)),
                     AvgCycle = g.Sum(x => (double)(x.dr?.RataRataTerakhirA4 ?? 0)),
@@ -53,14 +52,15 @@ namespace MonitoringApp.Services
                 .OrderBy(x => x.lineProduction)
                 .ToList();
 
-            return grouped;
+            return result;
         }
 
+        // --- 2. MACHINE DETAIL (Per Line) ---
         public List<MachineDetailViewModel> GetMachineDetailByLine(string lineProduction)
         {
             var result = new List<MachineDetailViewModel>();
 
-            // 1. Ambil Data Utama (Line + Realtime)
+            // Query Data Utama (Line + Realtime)
             var machines = (from l in _context.Lines
                             join dr in _context.DataRealtimes on l.Id equals dr.Id into joined
                             from dr in joined.DefaultIfEmpty()
@@ -72,10 +72,11 @@ namespace MonitoringApp.Services
                                 l.Name,
                                 l.Process,
                                 l.Remark,
+                                // Ambil objek realtime full untuk diakses propertinya nanti
                                 Realtime = dr
                             }).ToList();
 
-            // 2. Loop untuk mengambil data Shift & Mapping ke ViewModel
+            // Loop untuk mapping ke ViewModel dan ambil data Shift
             foreach (var item in machines)
             {
                 var vm = new MachineDetailViewModel
@@ -84,17 +85,17 @@ namespace MonitoringApp.Services
                     Line = item.LineProduction,
                     Name = item.Name,
                     Process = item.Process,
-                    Remark = item.Remark ?? "-",
+                    Remark = item.Remark ?? "-", // Handle Remark null
 
-                    // Data Realtime
+                    // Mapping Data Realtime (Safe Null Check)
                     NilaiA0 = item.Realtime?.NilaiA0 ?? 0,
                     PartHours = item.Realtime?.PartHours ?? 0,
                     Cycle = item.Realtime?.DurasiTerakhirA4 ?? 0,
                     AvgCycle = item.Realtime?.RataRataTerakhirA4 ?? 0,
-                    LastUpdate = item.Realtime?.Last_Update.ToString("yyyy-MM-dd HH:mm:ss") ?? "-"
+                    LastUpdate = item.Realtime != null ? item.Realtime.Last_Update.ToString("yyyy-MM-dd HH:mm:ss") : "-"
                 };
 
-                // Ambil Data Shift (Menggunakan Helper LINQ)
+                // Ambil Data Shift 1, 2, 3 menggunakan Helper Generic
                 vm.Shift1 = GetShiftSummaryLINQ(_context.Shift1s, item.Id);
                 vm.Shift2 = GetShiftSummaryLINQ(_context.Shift2s, item.Id);
                 vm.Shift3 = GetShiftSummaryLINQ(_context.Shift3s, item.Id);
@@ -105,23 +106,31 @@ namespace MonitoringApp.Services
             return result;
         }
 
-        // Helper LINQ untuk Shift
+        // --- HELPER: Generic Shift Fetcher ---
+        // Menggunakan Generics <T> agar bisa dipakai untuk Shift1, Shift2, dan Shift3
         private ShiftSummaryViewModel GetShiftSummaryLINQ<T>(DbSet<T> dbSet, int mesinId) where T : MachineDataBase
         {
+            // Cari data shift berdasarkan ID Mesin
             var data = dbSet.FirstOrDefault(x => x.Id == mesinId);
 
-            if (data == null) return new ShiftSummaryViewModel
+            // Jika tidak ada data, kembalikan default 0
+            if (data == null)
             {
-                Count = 0,
-                Downtime = "00:00:00",
-                Uptime = "00:00:00",
-                DowntimePercent = 0,
-                UptimePercent = 0
-            };
+                return new ShiftSummaryViewModel
+                {
+                    Count = 0,
+                    Downtime = "00:00:00",
+                    Uptime = "00:00:00",
+                    DowntimePercent = 0,
+                    UptimePercent = 0
+                };
+            }
 
+            // Jika ada, mapping ke ViewModel
             return new ShiftSummaryViewModel
             {
                 Count = data.NilaiTerakhirA2,
+                // TimeSpan diformat ke string HH:mm:ss
                 Downtime = data.DataCh1.ToString(@"hh\:mm\:ss"),
                 Uptime = data.Uptime.ToString(@"hh\:mm\:ss"),
                 DowntimePercent = data.P_DataCh1,

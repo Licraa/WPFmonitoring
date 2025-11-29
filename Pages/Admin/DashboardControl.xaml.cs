@@ -4,8 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input; // Wajib untuk MouseButtonEventArgs
+using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection; // WAJIB: Untuk App.ServiceProvider
 using MonitoringApp.Services;
 using MonitoringApp.ViewModels;
 
@@ -17,7 +18,7 @@ namespace MonitoringApp.Pages
         private DispatcherTimer _refreshTimer;
         private bool _isUpdating = false;
 
-        // 1. INI YANG HILANG: Deklarasi Event agar Admin.xaml.cs bisa mendengarkan
+        // Event agar Admin.xaml.cs bisa mendengarkan klik kartu
         public event EventHandler<string> OnLineSelected;
 
         public ObservableCollection<LineSummary> DashboardCollection { get; set; }
@@ -28,9 +29,13 @@ namespace MonitoringApp.Pages
 
             DashboardCollection = new ObservableCollection<LineSummary>();
 
-            // Init Service
-            var db = new DatabaseService();
-            _summaryService = new SummaryService(db);
+            // ❌ KODE LAMA (HAPUS INI):
+            // var db = new DatabaseService();
+            // _summaryService = new SummaryService(db);
+
+            // ✅ KODE BARU (PAKAI DI):
+            // Kita minta instance SummaryService yang sudah dikonfigurasi otomatis oleh App.xaml.cs
+            _summaryService = App.ServiceProvider.GetRequiredService<SummaryService>();
 
             this.DataContext = this;
 
@@ -84,6 +89,7 @@ namespace MonitoringApp.Pages
                     existingItem.Active = newItem.Active;
                     existingItem.Inactive = newItem.Inactive;
                     existingItem.TotalMachine = newItem.TotalMachine;
+                    existingItem.MachineCount = newItem.MachineCount;
                     existingItem.Count = newItem.Count;
                     existingItem.PartHours = newItem.PartHours;
                     existingItem.Cycle = newItem.Cycle;
@@ -115,7 +121,7 @@ namespace MonitoringApp.Pages
             TotalMachine = totalMachine;
         }
 
-        // Properti Header Summary
+        // --- Dependency Properties ---
         public int Active
         {
             get { return (int)GetValue(ActiveProperty); }
@@ -137,12 +143,12 @@ namespace MonitoringApp.Pages
         }
         public static readonly DependencyProperty TotalMachineProperty = DependencyProperty.Register("TotalMachine", typeof(int), typeof(DashboardControl), new PropertyMetadata(0));
 
-        // 2. INI LOGIKA KLIK: Mengirim sinyal event saat kartu diklik
+        // --- Event Handlers ---
         private void Card_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (sender is Border border && border.DataContext is LineSummary line)
             {
-                // Panggil event OnLineSelected jika ada yang mendengarkan (Admin.xaml.cs)
+                // Panggil event OnLineSelected agar Admin.xaml.cs bisa merespon
                 OnLineSelected?.Invoke(this, line.lineProduction);
             }
         }
