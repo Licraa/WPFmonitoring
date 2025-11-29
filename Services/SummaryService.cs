@@ -15,70 +15,87 @@ namespace MonitoringApp.Services
         }
 
         public List<LineSummary> GetLineSummary()
+{
+    var result = new List<LineSummary>();
+
+    using var conn = _db.GetConnection();
+    conn.Open();
+
+    // OPTIMASI: Ambil SEMUA data sekaligus dengan JOIN dalam 1 Query.
+    // Tidak ada lagi looping query ke database.
+    string query = @"
+        SELECT 
+            l.line_production,
+            dr.nilaiA0,
+            dr.nilaiTerakhirA2,
+            dr.durasiTerakhirA4,
+            dr.ratarataTerakhirA4,
+            dr.parthours,
+            dr.p_datach1,
+            dr.p_uptime
+        FROM line l
+        LEFT JOIN data_realtime dr ON l.id = dr.id";
+
+    var cmd = new SqlCommand(query, conn);
+    var reader = cmd.ExecuteReader();
+
+    // Kita tampung dulu datanya di memori lokal agar mudah di-grouping
+    var rawData = new List<dynamic>();
+
+    while (reader.Read())
+    {
+        rawData.Add(new
         {
-            List<LineSummary> result = new();
+            Line = reader["line_production"]?.ToString() ?? "Unknown",
+            NilaiA0 = reader["nilaiA0"] != DBNull.Value ? Convert.ToInt32(reader["nilaiA0"]) : 0,
+            NilaiTerakhirA2 = reader["nilaiTerakhirA2"] != DBNull.Value ? Convert.ToInt32(reader["nilaiTerakhirA2"]) : 0,
+            Durasi = reader["durasiTerakhirA4"] != DBNull.Value ? Convert.ToDouble(reader["durasiTerakhirA4"]) : 0.0,
+            RataRata = reader["ratarataTerakhirA4"] != DBNull.Value ? Convert.ToDouble(reader["ratarataTerakhirA4"]) : 0.0,
+            PartHours = reader["parthours"] != DBNull.Value ? Convert.ToDouble(reader["parthours"]) : 0.0,
+            DowntimeP = reader["p_datach1"] != DBNull.Value ? Convert.ToDouble(reader["p_datach1"]) : 0.0,
+            UptimeP = reader["p_uptime"] != DBNull.Value ? Convert.ToDouble(reader["p_uptime"]) : 0.0
+        });
+    }
+    reader.Close();
 
-            using var conn = _db.GetConnection();
-            conn.Open();
+    // Lakukan Grouping di C# (Jauh lebih ringan daripada bolak-balik ke DB)
+    var groupedData = rawData.GroupBy(x => x.Line);
 
-            // Ambil semua line_production
-            string lineQuery = "SELECT DISTINCT line_production FROM line";
-            var lineCmd = new SqlCommand(lineQuery, conn);
-            var reader = lineCmd.ExecuteReader();
+    foreach (var group in groupedData)
+    {
+        var summary = new LineSummary
+        {
+            lineProduction = group.Key
+        };
 
-            List<string> lineProductions = new();
-            while (reader.Read())
-                lineProductions.Add(reader.GetString(0));
+        // Hitung aggregasi
+        foreach (var item in group)
+        {
+            // Status Mesin (1 = Active)
+            if (item.NilaiA0 == 1) summary.Active++;
+            else summary.Inactive++;
 
-            reader.Close();
+            // Total Count
+            summary.Count += item.NilaiTerakhirA2;
 
-            foreach (string lp in lineProductions)
-            {
-                var summary = new LineSummary() { lineProduction = lp };
-
-                var cmd = new SqlCommand(@"
-                    SELECT r.*
-                    FROM data_realtime r
-                    JOIN line l ON l.id = r.id
-                    WHERE l.line_production = @lp
-                ", conn);
-
-                cmd.Parameters.AddWithValue("@lp", lp);
-
-                var r = cmd.ExecuteReader();
-
-                int machineCount = 0;
-                int countA2 = 0;
-                while (r.Read())
-                {
-                    machineCount++;
-                    // nilaiTerakhirA2 untuk Count
-                    int a2 = r["nilaiTerakhirA2"] != DBNull.Value ? Convert.ToInt32(r["nilaiTerakhirA2"]) : 0;
-                    countA2 += a2;
-                    // nilaiA0 untuk status aktif/tidak aktif
-                    int a0 = r["nilaiA0"] != DBNull.Value ? Convert.ToInt32(r["nilaiA0"]) : 0;
-                    summary.Active += a0 == 1 ? 1 : 0;
-                    summary.Inactive += a0 != 1 ? 1 : 0;
-
-                    summary.Cycle += r["durasiTerakhirA4"] != DBNull.Value ? Convert.ToDouble(r["durasiTerakhirA4"]) : 0;
-                    summary.AvgCycle += r["ratarataTerakhirA4"] != DBNull.Value ? Convert.ToDouble(r["ratarataTerakhirA4"]) : 0;
-                    summary.PartHours += r["parthours"] != DBNull.Value ? Convert.ToDouble(r["parthours"]) : 0;
-
-                    summary.DowntimePercent += r["p_datach1"] != DBNull.Value ? Convert.ToDouble(r["p_datach1"]) : 0;
-                    summary.UptimePercent += r["p_uptime"] != DBNull.Value ? Convert.ToDouble(r["p_uptime"]) : 0;
-                }
-
-                r.Close();
-
-                // Simpan total machine
-                summary.TotalMachine = machineCount;
-                summary.Count = countA2;
-
-                result.Add(summary);
-            }
-
-            return result;
+            // Penjumlahan lainnya (sesuaikan logika jika butuh rata-rata atau total)
+            summary.Cycle += item.Durasi;
+            summary.AvgCycle += item.RataRata;
+            summary.PartHours += item.PartHours;
+            summary.DowntimePercent += item.DowntimeP;
+            summary.UptimePercent += item.UptimeP;
         }
+
+        summary.TotalMachine = summary.Active + summary.Inactive;
+        
+        // Opsional: Jika Cycle/AvgCycle harusnya dirata-rata per mesin, bagi disini:
+        // if (summary.TotalMachine > 0) summary.AvgCycle /= summary.TotalMachine;
+
+        result.Add(summary);
+    }
+
+    return result;
+}
 
         public List<MachineDetailViewModel> GetMachineDetailByLine(string lineProduction)
         {
