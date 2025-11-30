@@ -4,10 +4,10 @@ namespace MonitoringApp.Pages
 {
     public partial class AddMachineWindow : Window
     {
-        public string MachineName { get; private set; }
-        public string Process { get; private set; }
-        public string Line { get; private set; }
-        public string Remark { get; private set; }
+        public string MachineName { get; private set; } = string.Empty;
+        public string Process { get; private set; } = string.Empty;
+        public string Line { get; private set; } = string.Empty;
+        public string Remark { get; private set; } = string.Empty;
         public bool IsSaved { get; private set; } = false;
 
         public AddMachineWindow()

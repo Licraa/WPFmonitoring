@@ -5,10 +5,10 @@ namespace MonitoringApp.Pages
 {
     public partial class EditMachineWindow : Window
     {
-        public string NewName { get; private set; }
-        public string NewProcess { get; private set; }
-        public string NewLine { get; private set; }
-        public string NewRemark { get; private set; } // Tambahan Remark
+        public string NewName { get; private set; } = string.Empty;
+        public string NewProcess { get; private set; } = string.Empty;
+        public string NewLine { get; private set; } = string.Empty;
+        public string NewRemark { get; private set; } = string.Empty; // Tambahan Remark
 
         public bool IsSaved { get; private set; } = false;
 

@@ -4,55 +4,81 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Login Monitoring App" Height="500" Width="800" 
+        Title="Login Monitoring App" Height="550" Width="900" 
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize" 
         WindowStyle="None" AllowsTransparency="True" Background="Transparent">
+
     <Window.Resources>
-        <Style x:Key="ModernInputBox" TargetType="Control">
-            <Setter Property="Height" Value="45"/>
-            <Setter Property="Padding" Value="15,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Background" Value="#F7F9FC"/>
-            <Setter Property="BorderBrush" Value="#E1E6EB"/>
+        <Style x:Key="ModernInputContainer" TargetType="Border">
+            <Setter Property="Background" Value="#F3F6F9"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Control">
-                        <Border Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="8">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="0" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Height" Value="50"/>
+            <Setter Property="Margin" Value="0,0,0,20"/>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="BorderBrush" Value="#4A90E2"/>
+                    <Setter Property="Background" Value="White"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#4A90E2" BlurRadius="8" ShadowDepth="0" Opacity="0.2"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <Style x:Key="ModernButton" TargetType="Button">
+        <Style x:Key="CleanTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="Foreground" Value="#333"/>
+        </Style>
+
+        <Style x:Key="CleanPasswordBox" TargetType="PasswordBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="Foreground" Value="#333"/>
+        </Style>
+
+        <Style x:Key="GradientButton" TargetType="Button">
             <Setter Property="Height" Value="50"/>
-            <Setter Property="Background" Value="#4A90E2"/> <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid>
-                            <Border x:Name="ButtonBorder" 
-                                    Background="{TemplateBinding Background}" 
-                                    CornerRadius="10">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="#4A90E2" BlurRadius="15" ShadowDepth="3" Opacity="0.3"/>
-                                </Border.Effect>
-                            </Border>
+                        <Border x:Name="border" CornerRadius="25">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#4A90E2" Offset="0.0"/>
+                                    <GradientStop Color="#005B8E" Offset="1.0"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#4A90E2" BlurRadius="15" ShadowDepth="3" Opacity="0.4"/>
+                            </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Grid>
+                        </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#357ABD"/>
+                                <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98" CenterX="100" CenterY="25"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -63,18 +89,20 @@
         <Style x:Key="CloseButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#AAB2BD"/>
-            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                            <TextBlock Text="✕" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="#FF5C5C"/> </Trigger>
+                                <Setter Property="Background" Value="#FFEEEE"/>
+                                <Setter Property="Foreground" Value="#FF5C5C"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -82,30 +110,83 @@
         </Style>
     </Window.Resources>
 
-    <Border CornerRadius="20" Background="#F0F4F8">
+    <Border CornerRadius="20" Background="#F0F2F5">
         <Grid>
-            <Button Style="{StaticResource CloseButton}" Content="✕" 
-                    HorizontalAlignment="Right" VerticalAlignment="Top" 
-                    Margin="0,20,20,0" Width="30" Height="30"
-                    Click="BtnClose_Click"/>
-
-            <Border Background="White" Width="400" VerticalAlignment="Center" CornerRadius="15" Padding="40">
+            <Border Background="White" Width="750" Height="450" CornerRadius="15" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="5" Color="Black" Opacity="0.1"/>
+                    <DropShadowEffect BlurRadius="40" ShadowDepth="10" Color="Black" Opacity="0.1"/>
                 </Border.Effect>
-                
-                <StackPanel>
-                    <TextBlock Text="Welcome Back!" FontSize="28" FontWeight="ExtraBold" Foreground="#333" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Please enter your details." FontSize="14" Foreground="#999" HorizontalAlignment="Center" Margin="0,5,0,30"/>
 
-                    <TextBlock Text="Username" Foreground="#666" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                    <TextBox x:Name="txtUsername" Style="{StaticResource ModernInputBox}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="Password" Foreground="#666" FontWeight="SemiBold" Margin="0,20,0,8"/>
-                    <PasswordBox x:Name="txtPassword" Style="{StaticResource ModernInputBox}"/>
+                    <Border Grid.Column="0" CornerRadius="15,0,0,15">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#005B8E" Offset="0"/>
+                                <GradientStop Color="#4A90E2" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
 
-                    <Button Content="Login" Margin="0,35,0,0" Style="{StaticResource ModernButton}" Click="Login_Click"/>
-                </StackPanel>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="🏭" FontSize="60" HorizontalAlignment="Center" Foreground="White" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="CCI" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock Text="MONITORING SYSTEM" FontSize="12" Foreground="#E0E0E0" HorizontalAlignment="Center"  Margin="0,5,0,0"/>
+
+                            <Border Background="White" Height="1" Width="50" Margin="0,20,0,20" Opacity="0.5"/>
+
+                            <TextBlock Text="Realtime Production" FontSize="11" Foreground="#D1E8FF" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Efficiency Tracking" FontSize="11" Foreground="#D1E8FF" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Column="1">
+                        <Button Style="{StaticResource CloseButton}" 
+                                HorizontalAlignment="Right" VerticalAlignment="Top" 
+                                Margin="0,15,15,0" Width="30" Height="30"
+                                Click="BtnClose_Click"/>
+
+                        <StackPanel VerticalAlignment="Center" Margin="50,0">
+                            <TextBlock Text="Hello Again!" FontSize="26" FontWeight="Bold" Foreground="#2D3748"/>
+                            <TextBlock Text="Welcome back, you've been missed!" FontSize="14" Foreground="#A0AEC0" Margin="0,5,0,30"/>
+
+                            <TextBlock Text="Username" Foreground="#718096" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,8"/>
+                            <Border Style="{StaticResource ModernInputContainer}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Path Grid.Column="0" Data="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" 
+                                          Fill="#A0AEC0" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center"/>
+
+                                    <TextBox x:Name="txtUsername" Grid.Column="1" Style="{StaticResource CleanTextBox}"/>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="Password" Foreground="#718096" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,8"/>
+                            <Border Style="{StaticResource ModernInputContainer}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Path Grid.Column="0" Data="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" 
+                                          Fill="#A0AEC0" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center"/>
+
+                                    <PasswordBox x:Name="txtPassword" Grid.Column="1" Style="{StaticResource CleanPasswordBox}"/>
+                                </Grid>
+                            </Border>
+
+                            <Button Content="Login" Margin="0,10,0,0" Style="{StaticResource GradientButton}" Click="Login_Click"/>
+
+                        </StackPanel>
+                    </Grid>
+                </Grid>
             </Border>
         </Grid>
     </Border>

@@ -28,24 +28,9 @@ namespace MonitoringApp.Pages
         {
             if (_dashboardView == null)
             {
-                // MENGGUNAKAN DI: Ambil DashboardControl dari ServiceProvider
-                // Pastikan DashboardControl sudah didaftarkan di App.xaml.cs (AddTransient)
-                // Jika belum, Anda bisa menambahkannya, atau jika DashboardControl constructor-nya kosong, 'new' biasa masih oke.
-                // Tapi untuk konsistensi, kita asumsi DashboardControl kelak butuh Service.
 
-                // Note: Jika DashboardControl belum didaftarkan di DI, gunakan 'new DashboardControl()' 
-                // Tapi karena kita mau standar pro, kita pakai DI.
-                // Jika error "No service for type DashboardControl", tambahkan services.AddTransient<DashboardControl>() di App.xaml.cs
-                // Untuk amannya di sini saya pakai pendekatan manual injection jika DashboardControl blm didaftarkan:
+                _dashboardView = App.ServiceProvider.GetRequiredService<DashboardControl>();
 
-                _dashboardView = new DashboardControl(); // (Atau pakai DI jika sudah didaftarkan)
-
-                // Event Listener: Jika user klik kartu di Dashboard, pindah ke Machines
-                _dashboardView.OnLineSelected += (sender, lineName) =>
-                {
-                    NavigateToMachines();
-                    _machinesView?.OpenSpecificLine(lineName);
-                };
             }
 
             MainContentArea.Content = _dashboardView;
@@ -56,9 +41,7 @@ namespace MonitoringApp.Pages
         {
             if (_serialView == null)
             {
-                // MENGGUNAKAN DI: PENTING!
-                // SerialMonitorControl punya BANYAK dependency di constructornya.
-                // Kita TIDAK BISA pakai 'new SerialMonitorControl()'. Harus minta ke Provider.
+                
                 _serialView = App.ServiceProvider.GetRequiredService<SerialMonitorControl>();
             }
 
@@ -70,9 +53,7 @@ namespace MonitoringApp.Pages
         {
             if (_machinesView == null)
             {
-                // MENGGUNAKAN DI (Opsional tapi disarankan jika MachinesControl butuh MachineService)
-                // _machinesView = App.ServiceProvider.GetRequiredService<MachinesControl>();
-                // Jika belum didaftarkan di App.xaml.cs, pakai new biasa dulu:
+                
                 _machinesView = new MachinesControl();
             }
 
@@ -97,13 +78,9 @@ namespace MonitoringApp.Pages
             var result = MessageBox.Show("Are you sure you want to logout?", "Logout", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result == MessageBoxResult.Yes)
             {
-                // Tidak perlu stop serial manual di sini, karena SerialPortService adalah Singleton.
-                // Koneksi akan tetap hidup di background (sesuai standar monitoring), 
-                // atau bisa dipanggil _serialService.Stop() jika ingin benar-benar mati.
+                
 
-                this.Close();
-                // Opsional: Buka login lagi
-                // App.ServiceProvider.GetRequiredService<LoginWindow>().Show();
+                this.Close(); 
             }
         }
 

@@ -4,6 +4,7 @@
         xmlns:controls="clr-namespace:MonitoringApp.Controls"
         Title="Machine Uptime Monitoring" Height="900" Width="1600" 
         Background="#F2F2F2"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
@@ -145,6 +146,19 @@
                             <MenuItem Header="⚙️   Admin Panel" Click="BtnOpenAdmin_Click" Style="{StaticResource ModernMenuItem}"/>
                             <Separator Style="{StaticResource ModernSeparator}"/>
                             <MenuItem Header="📥   Download Excel Report" Click="BtnDownloadExcel_Click" Style="{StaticResource ModernMenuItem}"/>
+
+                            <MenuItem Header="🚪   Logout" Click="BtnLogout_Click">
+                                <MenuItem.Style>
+                                    <Style TargetType="MenuItem" BasedOn="{StaticResource ModernMenuItem}">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsHighlighted" Value="True">
+                                                <Setter Property="Foreground" Value="#EF4444"/>
+                                                <Setter Property="Background" Value="#FEF2F2"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </MenuItem.Style>
+                            </MenuItem>
                         </ContextMenu>
                     </Button.ContextMenu>
 
@@ -172,14 +186,23 @@
                     <ItemsControl x:Name="cardContainer">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <UniformGrid Columns="4" Margin="20" />
+                                <UniformGrid Columns="3" Margin="15" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="White" CornerRadius="15" Padding="20" Margin="10" BorderThickness="1" BorderBrush="#BFBFBF" MouseDown="Card_MouseDown" Cursor="Hand">
+                                <Border Background="White" 
+                                        CornerRadius="15" 
+                                        Padding="20" 
+                                        Margin="10" 
+                                        BorderThickness="1" 
+                                        BorderBrush="#BFBFBF" 
+                                        MouseDown="Card_MouseDown" 
+                                        Cursor="Hand"
+                                        VerticalAlignment="Top">
                                     <StackPanel HorizontalAlignment="Center">
                                         <TextBlock Text="{Binding lineProduction}" FontSize="22" FontWeight="Bold" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
                                             <StackPanel Width="120" HorizontalAlignment="Center">
                                                 <TextBlock Text="{Binding Active}" Foreground="Green" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -192,34 +215,61 @@
                                                 <TextBlock Text="Machine" FontSize="14" HorizontalAlignment="Center"/>
                                             </StackPanel>
                                         </StackPanel>
-                                        <Border Background="#FAFAFA" BorderThickness="1" BorderBrush="#DDDDDD" CornerRadius="10" Padding="15" Margin="10" Width="250">
+
+                                        <Border Background="#FAFAFA" BorderThickness="1" BorderBrush="#DDDDDD" CornerRadius="10" Padding="10" Margin="10" Width="360">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="COUNT"/>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Count}" FontWeight="Bold"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="PART/HR"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PartHours, StringFormat={}{0:F1}}" FontWeight="Bold"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="CYCLE"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Cycle, StringFormat={}{0:N2}}" FontWeight="Bold"/>
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="AVG CYCLE"/>
-                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AvgCycle, StringFormat={}{0:N2}}" FontWeight="Bold"/>
-                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="DOWNTIME"/>
-                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DowntimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold"/>
-                                                <TextBlock Grid.Row="5" Grid.Column="0" Text="UPTIME"/>
-                                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding UptimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold"/>
+
+                                                <Rectangle Grid.Column="1" Fill="#E0E0E0" Width="1" Margin="5,2"/>
+
+                                                <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="COUNT" Foreground="#777" FontSize="11"/>
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Count}" FontWeight="Bold" Foreground="#333" Margin="10,0,0,0"/>
+
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="PART/HR" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
+                                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PartHours, StringFormat={}{0:F1}}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
+
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="CYCLE" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
+                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Cycle, StringFormat={}{0:N2}}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
+                                                </Grid>
+
+                                                <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="AVG CYCLE" Foreground="#777" FontSize="11"/>
+                                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AvgCycle, StringFormat={}{0:N2}}" FontWeight="Bold" Foreground="#333" Margin="10,0,0,0"/>
+
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="DOWNTIME" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
+                                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DowntimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
+
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="UPTIME" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
+                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding UptimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
+                                                </Grid>
                                             </Grid>
                                         </Border>
+
                                         <TextBlock Text="{Binding TotalMachine, StringFormat={}{0} Total Machine}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>

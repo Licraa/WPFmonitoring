@@ -1,116 +1,143 @@
 ﻿<UserControl x:Class="MonitoringApp.Pages.DashboardControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="1000"
-             Background="#F2F2F2">
+             d:DesignHeight="900" d:DesignWidth="1000"
+             Background="#F3F4F6">
 
     <UserControl.Resources>
-        <SolidColorBrush x:Key="ActiveBrush" Color="#2E7D32"/>
-        <SolidColorBrush x:Key="InactiveBrush" Color="#C62828"/>
+        <DropShadowEffect x:Key="CardShadow" Color="Black" Opacity="0.06" BlurRadius="15" ShadowDepth="4" Direction="270"/>
 
-        <Style x:Key="CardInnerPanel" TargetType="Border">
+        <Style x:Key="HealthCardStyle" TargetType="Border">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="BorderBrush" Value="#E6E6E6"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Padding" Value="25"/>
+            <Setter Property="Height" Value="180"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
+        </Style>
+
+        <Style x:Key="StatusPill" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="40">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Margin="0,0,0,20" Padding="15" Background="White" CornerRadius="10" BorderBrush="#CCCCCC" BorderThickness="1">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <StackPanel Margin="40,0">
-                    <TextBlock Text="{Binding Active}" Foreground="Green" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Connected" FontSize="14" HorizontalAlignment="Center" Foreground="#666"/>
-                </StackPanel>
-                <StackPanel Margin="40,0">
-                    <TextBlock Text="{Binding Inactive}" Foreground="Red" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Disconnected" FontSize="14" HorizontalAlignment="Center" Foreground="#666"/>
-                </StackPanel>
-                <StackPanel Margin="40,0">
-                    <TextBlock Text="{Binding TotalMachine}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#333"/>
-                    <TextBlock Text="Total Machines" FontSize="14" HorizontalAlignment="Center" Foreground="#666"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
+        <StackPanel Grid.Row="0" Margin="0,0,0,35">
+            <TextBlock Text="System Health Overview" FontSize="32" FontWeight="Bold" Foreground="#111827"/>
+            <TextBlock Text="Real-time monitoring of application services and hardware resources." FontSize="16" Foreground="#6B7280" Margin="0,5,0,0"/>
+        </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <ItemsControl x:Name="cardContainer" ItemsSource="{Binding DashboardCollection}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <UniformGrid Columns="2" Margin="0,0,20,0">
 
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Background="White" CornerRadius="15" Padding="20" Margin="0,0,20,20" BorderThickness="1" BorderBrush="#BFBFBF" Width="300" Cursor="Hand" MouseLeftButtonUp="Card_MouseLeftButtonUp">
-                            <StackPanel HorizontalAlignment="Center">
-
-                                <TextBlock Text="{Binding lineProduction}" FontSize="22" FontWeight="Bold" Margin="0,0,0,15" HorizontalAlignment="Center" Foreground="#111"/>
-
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
-                                    <StackPanel Width="100" HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Active}" Foreground="Green" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Active" FontSize="12" HorizontalAlignment="Center" Foreground="#666"/>
-                                    </StackPanel>
-                                    <StackPanel Width="100" HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Inactive}" Foreground="Red" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Inactive" FontSize="12" HorizontalAlignment="Center" Foreground="#666"/>
-                                    </StackPanel>
-                                </StackPanel>
-
-                                <Border Background="#FAFAFA" BorderThickness="1" BorderBrush="#DDDDDD" CornerRadius="10" Padding="15" Margin="5" Width="240">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="COUNT" Foreground="#555"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Count}" FontWeight="Bold"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="PART/HR" Foreground="#555"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PartHours, StringFormat={}{0:F1}}" FontWeight="Bold"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="CYCLE" Foreground="#555"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Cycle, StringFormat={}{0:F1}s}" FontWeight="Bold"/>
-
-                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="AVG CYCLE" Foreground="#555"/>
-                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AvgCycle, StringFormat={}{0:F1}s}" FontWeight="Bold"/>
-
-                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="DOWNTIME" Foreground="#555"/>
-                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DowntimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold"/>
-
-                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="UPTIME" Foreground="#555"/>
-                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding UptimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold"/>
-                                    </Grid>
-                                </Border>
-
-                                <TextBlock Text="{Binding TotalMachine, StringFormat={}{0} Total Machine}" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" Margin="0,10,0,0" Foreground="#333"/>
-                            </StackPanel>
+                <Border Style="{StaticResource HealthCardStyle}">
+                    <Grid>
+                        <Border Style="{StaticResource StatusPill}" Background="{Binding DbStatusColor}">
+                            <TextBlock Text="{Binding DbStatusText}" Foreground="White" FontSize="11" FontWeight="Bold"/>
                         </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                        <StackPanel VerticalAlignment="Center">
+                            <Border Width="50" Height="50" CornerRadius="25" Background="#EFF6FF" HorizontalAlignment="Left" Margin="0,0,0,15">
+                                <TextBlock Text="🗄️" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Database Server" FontSize="14" FontWeight="SemiBold" Foreground="#6B7280"/>
+                            <TextBlock Text="{Binding DbName}" FontSize="20" FontWeight="Bold" Foreground="#1F2937" Margin="0,4,0,0"/>
+                            <TextBlock Text="SQL Connection" FontSize="12" Foreground="#9CA3AF" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HealthCardStyle}">
+                    <Grid>
+                        <Border Style="{StaticResource StatusPill}" Background="{Binding SerialStatusColor}">
+                            <TextBlock Text="{Binding SerialStatusText}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <Border Width="50" Height="50" CornerRadius="25" Background="#ECFDF5" HorizontalAlignment="Left" Margin="0,0,0,15">
+                                <TextBlock Text="🔌" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Serial Interface" FontSize="14" FontWeight="SemiBold" Foreground="#6B7280"/>
+                            <TextBlock Text="{Binding ActivePort}" FontSize="20" FontWeight="Bold" Foreground="#1F2937" Margin="0,4,0,0"/>
+                            <TextBlock Text="{Binding LastDataTime}" FontSize="12" Foreground="#9CA3AF" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HealthCardStyle}">
+                    <Grid>
+                        <StackPanel VerticalAlignment="Center">
+                            <Border Width="50" Height="50" CornerRadius="25" Background="#FFF7ED" HorizontalAlignment="Left" Margin="0,0,0,15">
+                                <TextBlock Text="⏱️" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Current Shift" FontSize="14" FontWeight="SemiBold" Foreground="#6B7280"/>
+                            <TextBlock Text="{Binding CurrentShift}" FontSize="20" FontWeight="Bold" Foreground="#1F2937" Margin="0,4,0,0"/>
+                            <TextBlock Text="{Binding SystemTime}" FontSize="12" Foreground="#9CA3AF" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HealthCardStyle}">
+                    <Grid>
+                        <Button Content="Open Folder" Click="BtnOpenLogs_Click" 
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Background="White" BorderBrush="#E5E7EB" BorderThickness="1" 
+                                Foreground="#374151" FontSize="11" FontWeight="SemiBold"
+                                Padding="12,6" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                        <StackPanel VerticalAlignment="Center">
+                            <Border Width="50" Height="50" CornerRadius="25" Background="#F3F4F6" HorizontalAlignment="Left" Margin="0,0,0,15">
+                                <TextBlock Text="📂" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Log Storage Usage" FontSize="14" FontWeight="SemiBold" Foreground="#6B7280"/>
+                            <TextBlock Text="{Binding LogSize}" FontSize="20" FontWeight="Bold" Foreground="#1F2937" Margin="0,4,0,0"/>
+                            <TextBlock Text="Local CSV &amp; Reports" FontSize="12" Foreground="#9CA3AF" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HealthCardStyle}">
+                    <Grid>
+                        <StackPanel VerticalAlignment="Center">
+                            <Border Width="50" Height="50" CornerRadius="25" Background="#FEF2F2" HorizontalAlignment="Left" Margin="0,0,0,15">
+                                <TextBlock Text="💻" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="CPU Load" FontSize="14" FontWeight="SemiBold" Foreground="#6B7280"/>
+                            <TextBlock Text="{Binding CpuUsage}" FontSize="20" FontWeight="Bold" Foreground="#1F2937" Margin="0,4,0,0"/>
+                            <TextBlock Text="Total Processor Time" FontSize="12" Foreground="#9CA3AF" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HealthCardStyle}">
+                    <Grid>
+                        <StackPanel VerticalAlignment="Center">
+                            <Border Width="50" Height="50" CornerRadius="25" Background="#F0F9FF" HorizontalAlignment="Left" Margin="0,0,0,15">
+                                <TextBlock Text="🧠" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Memory Available" FontSize="14" FontWeight="SemiBold" Foreground="#6B7280"/>
+                            <TextBlock Text="{Binding RamUsage}" FontSize="20" FontWeight="Bold" Foreground="#1F2937" Margin="0,4,0,0"/>
+                            <TextBlock Text="System RAM Free" FontSize="12" Foreground="#9CA3AF" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+            </UniformGrid>
         </ScrollViewer>
     </Grid>
 </UserControl>

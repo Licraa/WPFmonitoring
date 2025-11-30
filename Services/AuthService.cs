@@ -8,20 +8,18 @@ namespace MonitoringApp.Services
     {
         private readonly AppDbContext _context;
 
-        public AuthService()
+        public AuthService(AppDbContext context)
         {
-            // Inisialisasi Context
-            _context = new AppDbContextFactory().CreateDbContext(null);
+            _context = context;
         }
 
         public string? Login(string username, string password)
         {
-            // LINQ: Mencari user berdasarkan username & password
-            // Note: Di production, password harus di-hash, jangan plain text.
+            // LINQ: Mencari user
             var user = _context.Users
                 .FirstOrDefault(u => u.Username == username && u.Password == password);
 
-            return user?.Role; // Kembalikan Role jika user ditemukan, atau null jika tidak
+            return user?.Role;
         }
     }
 }

@@ -1,156 +1,178 @@
 ﻿using System;
-using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Threading;
-using Microsoft.Extensions.DependencyInjection; // WAJIB: Untuk App.ServiceProvider
+using MonitoringApp.Data;
 using MonitoringApp.Services;
-using MonitoringApp.ViewModels;
 
 namespace MonitoringApp.Pages
 {
     public partial class DashboardControl : UserControl
     {
-        private readonly SummaryService _summaryService;
-        private DispatcherTimer _refreshTimer;
-        private bool _isUpdating = false;
+        // Dependency Services
+        private readonly AppDbContext _context;
+        private readonly SerialPortService _serialService;
+        private readonly CsvLogService _csvService;
 
-        // Event agar Admin.xaml.cs bisa mendengarkan klik kartu
-        public event EventHandler<string> OnLineSelected;
+        // Hardware Counters
+        private PerformanceCounter? _cpuCounter;
+        private PerformanceCounter? _ramCounter;
 
-        public ObservableCollection<LineSummary> DashboardCollection { get; set; }
+        // Timer
+        private DispatcherTimer _timer;
 
-        public DashboardControl()
+        // CONSTRUCTOR INJECTION (Profesional Standard)
+        // Kita meminta Service langsung di parameter, bukan mengambil sendiri
+        public DashboardControl(
+            AppDbContext context,
+            SerialPortService serialService,
+            CsvLogService csvService)
         {
             InitializeComponent();
 
-            DashboardCollection = new ObservableCollection<LineSummary>();
+            _context = context;
+            _serialService = serialService;
+            _csvService = csvService;
 
-            // ❌ KODE LAMA (HAPUS INI):
-            // var db = new DatabaseService();
-            // _summaryService = new SummaryService(db);
+            // Setup ViewModel
+            this.DataContext = new DashboardViewModel();
 
-            // ✅ KODE BARU (PAKAI DI):
-            // Kita minta instance SummaryService yang sudah dikonfigurasi otomatis oleh App.xaml.cs
-            _summaryService = App.ServiceProvider.GetRequiredService<SummaryService>();
+            // Init Hardware Counters (Bungkus try-catch agar tidak crash di PC yang diproteksi)
+            InitializePerformanceCounters();
 
-            this.DataContext = this;
+            // Setup Timer
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _timer.Tick += UpdateSystemStatus;
 
-            _refreshTimer = new DispatcherTimer();
-            _refreshTimer.Interval = TimeSpan.FromSeconds(2);
-            _refreshTimer.Tick += RefreshTimer_Tick;
-
-            this.Loaded += DashboardControl_Loaded;
-            this.Unloaded += DashboardControl_Unloaded;
+            // Lifetime Management
+            this.Loaded += (s, e) => { UpdateSystemStatus(null, null); _timer.Start(); };
+            this.Unloaded += OnUnloaded;
         }
 
-        private async void DashboardControl_Loaded(object sender, RoutedEventArgs e)
+        private void InitializePerformanceCounters()
         {
-            await UpdateDashboardDataAsync();
-            _refreshTimer.Start();
-        }
-
-        private void DashboardControl_Unloaded(object sender, RoutedEventArgs e)
-        {
-            _refreshTimer.Stop();
-        }
-
-        private async void RefreshTimer_Tick(object? sender, EventArgs e)
-        {
-            if (_isUpdating) return;
-            _isUpdating = true;
             try
             {
-                await UpdateDashboardDataAsync();
+                // Note: PerformanceCounter hanya jalan di Windows
+                _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+                _ramCounter = new PerformanceCounter("Memory", "Available MBytes");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Dashboard Error: {ex.Message}");
+                // Jika gagal (misal permission denied), biarkan null agar aplikasi tidak crash
+                System.Diagnostics.Debug.WriteLine($"Counter Error: {ex.Message}");
             }
-            finally
+        }
+
+        private void UpdateSystemStatus(object? sender, EventArgs? e)
+        {
+            if (this.DataContext is not DashboardViewModel vm) return;
+
+            // 1. Cek Database
+            bool dbConnected = false;
+            try { dbConnected = _context.Database.CanConnect(); } catch { }
+
+            vm.DbStatusText = dbConnected ? "Connected" : "Disconnected";
+            vm.DbStatusColor = dbConnected ? "#10B981" : "#EF4444";
+            vm.DbName = "MonitoringDB";
+
+            // 2. Cek Serial Port
+            bool serialActive = _serialService.IsRunning;
+            vm.SerialStatusText = serialActive ? "Running" : "Stopped";
+            vm.SerialStatusColor = serialActive ? "#10B981" : "#F59E0B";
+            vm.ActivePort = serialActive ? "Port Active" : "No Port";
+            vm.LastDataTime = serialActive ? "Listening..." : "Service Idle";
+
+            // 3. Shift Info
+            var shiftInfo = _csvService.GetCurrentShiftInfo();
+            vm.CurrentShift = shiftInfo.shiftName.Replace("_", " ").ToUpper();
+            vm.SystemTime = DateTime.Now.ToString("dd MMM yyyy, HH:mm:ss");
+
+            // 4. Log Size
+            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data_log_monitoring");
+            if (Directory.Exists(logPath))
             {
-                _isUpdating = false;
+                // Hitung total size semua file dalam folder log
+                long size = new DirectoryInfo(logPath).GetFiles("*.*", SearchOption.AllDirectories).Sum(fi => fi.Length);
+                vm.LogSize = FormatBytes(size);
             }
-        }
-
-        private async Task UpdateDashboardDataAsync()
-        {
-            var newDataList = await Task.Run(() => _summaryService.GetLineSummary());
-
-            foreach (var newItem in newDataList)
+            else
             {
-                var existingItem = DashboardCollection.FirstOrDefault(x => x.lineProduction == newItem.lineProduction);
-
-                if (existingItem != null)
-                {
-                    existingItem.Active = newItem.Active;
-                    existingItem.Inactive = newItem.Inactive;
-                    existingItem.TotalMachine = newItem.TotalMachine;
-                    existingItem.MachineCount = newItem.MachineCount;
-                    existingItem.Count = newItem.Count;
-                    existingItem.PartHours = newItem.PartHours;
-                    existingItem.Cycle = newItem.Cycle;
-                    existingItem.AvgCycle = newItem.AvgCycle;
-                    existingItem.DowntimePercent = newItem.DowntimePercent;
-                    existingItem.UptimePercent = newItem.UptimePercent;
-                }
-                else
-                {
-                    DashboardCollection.Add(newItem);
-                }
+                vm.LogSize = "0 MB";
             }
 
-            var itemsToRemove = DashboardCollection
-                .Where(x => !newDataList.Any(n => n.lineProduction == x.lineProduction))
-                .ToList();
-            foreach (var item in itemsToRemove) DashboardCollection.Remove(item);
-
-            int totalMachine = 0, totalActive = 0, totalInactive = 0;
-            foreach (var s in DashboardCollection)
+            // 5. Hardware Stats (Hanya jika counter berhasil di-init)
+            if (_cpuCounter != null && _ramCounter != null)
             {
-                totalMachine += s.TotalMachine;
-                totalActive += s.Active;
-                totalInactive += s.Inactive;
-            }
-
-            Active = totalActive;
-            Inactive = totalInactive;
-            TotalMachine = totalMachine;
-        }
-
-        // --- Dependency Properties ---
-        public int Active
-        {
-            get { return (int)GetValue(ActiveProperty); }
-            set { SetValue(ActiveProperty, value); }
-        }
-        public static readonly DependencyProperty ActiveProperty = DependencyProperty.Register("Active", typeof(int), typeof(DashboardControl), new PropertyMetadata(0));
-
-        public int Inactive
-        {
-            get { return (int)GetValue(InactiveProperty); }
-            set { SetValue(InactiveProperty, value); }
-        }
-        public static readonly DependencyProperty InactiveProperty = DependencyProperty.Register("Inactive", typeof(int), typeof(DashboardControl), new PropertyMetadata(0));
-
-        public int TotalMachine
-        {
-            get { return (int)GetValue(TotalMachineProperty); }
-            set { SetValue(TotalMachineProperty, value); }
-        }
-        public static readonly DependencyProperty TotalMachineProperty = DependencyProperty.Register("TotalMachine", typeof(int), typeof(DashboardControl), new PropertyMetadata(0));
-
-        // --- Event Handlers ---
-        private void Card_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (sender is Border border && border.DataContext is LineSummary line)
-            {
-                // Panggil event OnLineSelected agar Admin.xaml.cs bisa merespon
-                OnLineSelected?.Invoke(this, line.lineProduction);
+                // NextValue() pertama kali seringkali return 0, jadi pemanggilan berulang timer akan memperbaikinya
+                vm.CpuUsage = $"{_cpuCounter.NextValue():0}%";
+                vm.RamUsage = $"{_ramCounter.NextValue()} MB Free";
             }
         }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            _timer.Stop();
+            // Bersihkan memori counter agar tidak leak
+            _cpuCounter?.Dispose();
+            _ramCounter?.Dispose();
+        }
+
+        private string FormatBytes(long bytes)
+        {
+            if (bytes >= 1048576) return $"{bytes / 1024f / 1024f:0.0} MB";
+            if (bytes >= 1024) return $"{bytes / 1024f:0.0} KB";
+            return $"{bytes} B";
+        }
+
+        private void BtnOpenLogs_Click(object sender, RoutedEventArgs e)
+        {
+            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data_log_monitoring");
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+        }
+    }
+
+    // ViewModel Sederhana
+    public class DashboardViewModel : ViewModels.ViewModelBase
+    {
+        private string _dbStatusText = "Checking...";
+        public string DbStatusText { get => _dbStatusText; set => SetProperty(ref _dbStatusText, value); }
+
+        private string _dbStatusColor = "#9CA3AF";
+        public string DbStatusColor { get => _dbStatusColor; set => SetProperty(ref _dbStatusColor, value); }
+
+        private string _dbName = "-";
+        public string DbName { get => _dbName; set => SetProperty(ref _dbName, value); }
+
+        private string _serialStatusText = "Checking...";
+        public string SerialStatusText { get => _serialStatusText; set => SetProperty(ref _serialStatusText, value); }
+
+        private string _serialStatusColor = "#9CA3AF";
+        public string SerialStatusColor { get => _serialStatusColor; set => SetProperty(ref _serialStatusColor, value); }
+
+        private string _activePort = "-";
+        public string ActivePort { get => _activePort; set => SetProperty(ref _activePort, value); }
+
+        private string _lastDataTime = "-";
+        public string LastDataTime { get => _lastDataTime; set => SetProperty(ref _lastDataTime, value); }
+
+        private string _currentShift = "-";
+        public string CurrentShift { get => _currentShift; set => SetProperty(ref _currentShift, value); }
+
+        private string _systemTime = "-";
+        public string SystemTime { get => _systemTime; set => SetProperty(ref _systemTime, value); }
+
+        private string _logSize = "0 MB";
+        public string LogSize { get => _logSize; set => SetProperty(ref _logSize, value); }
+
+        private string _cpuUsage = "0%";
+        public string CpuUsage { get => _cpuUsage; set => SetProperty(ref _cpuUsage, value); }
+
+        private string _ramUsage = "0 MB";
+        public string RamUsage { get => _ramUsage; set => SetProperty(ref _ramUsage, value); }
     }
 }

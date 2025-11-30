@@ -5,7 +5,7 @@ namespace MonitoringApp.ViewModels
     // 1. Warisi ViewModelBase
     public class LineSummary : ViewModelBase
     {
-        public string lineProduction { get; set; } // Identifier (biasanya statis)
+        public string lineProduction { get; set; } = string.Empty;// Identifier (biasanya statis)
 
         // 2. Ubah properti angka menjadi Full Property dengan OnPropertyChanged
         private int _active;

@@ -214,7 +214,7 @@ namespace MonitoringApp.Pages
     // Class Helper Sederhana untuk Tampilan Kartu Depan
     public class LineSummaryItem
     {
-        public string LineName { get; set; }
+        public string LineName { get; set; } = string.Empty;
         public int TotalCount { get; set; }
         public int ActiveCount { get; set; }
         public int InactiveCount { get; set; }

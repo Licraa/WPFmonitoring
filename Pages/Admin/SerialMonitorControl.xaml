@@ -75,18 +75,19 @@
                     <Button x:Name="btnStart" Content="▶ START" Background="#10B981" Click="BtnStart_Click" Style="{StaticResource ActionBtn}" Height="24" Width="60"/>
                     <Button x:Name="btnStop" Content="■ STOP" Background="#EF4444" Click="BtnStop_Click" IsEnabled="False" Style="{StaticResource ActionBtn}" Height="24" Width="60"/>
                     <Button x:Name="btnClear" Content="🗑 CLEAR" Background="#6B7280" Click="BtnClear_Click" Style="{StaticResource ActionBtn}" Width="64" Height="24"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <CheckBox x:Name="chkShowLog" 
+              Content="Show Live Log (Debug)" 
+              Foreground="#6B7280" 
+              FontSize="12" 
+              FontWeight="SemiBold"
+              VerticalContentAlignment="Center"
+              Checked="ChkShowLog_Checked"
+              Unchecked="ChkShowLog_Unchecked"/>
+                    </StackPanel>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
-                    <CheckBox x:Name="chkShowLog" 
-                              Content="Show Live Log (Debug)" 
-                              Foreground="#6B7280" 
-                              FontSize="12" 
-                              FontWeight="SemiBold"
-                              VerticalContentAlignment="Center"
-                              Checked="ChkShowLog_Checked"
-                              Unchecked="ChkShowLog_Unchecked"/>
-                </StackPanel>
+                
 
                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
                     <TextBlock Text="CONNECTION STATUS" FontSize="10" FontWeight="Bold" Foreground="#9CA3AF"/>
@@ -141,8 +142,7 @@
                                 <Button x:Name="btnDbConnect" Content="Connect" Click="BtnDbConnect_Click" 
                                         Background="#3B82F6" Height="24" FontSize="10" Padding="8,0" Style="{StaticResource ActionBtn}" Width="63"/>
                             </StackPanel>
-
-                            <Border Background="#E0F2FE" CornerRadius="4" Padding="8,4" BorderBrush="#BAE6FD" BorderThickness="1" Margin="0,0,0,10" Width="87">
+                            <Border Background="#E0F2FE" CornerRadius="4" Padding="8,4" BorderBrush="#BAE6FD" BorderThickness="1" Width="162">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⏱ " FontSize="11" Foreground="#0284C7"/>
                                     <TextBlock x:Name="txtCurrentShift" Text="Loading..." FontWeight="Bold" Foreground="#0284C7" FontSize="11"/>

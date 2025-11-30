@@ -89,21 +89,12 @@ namespace MonitoringApp.Pages
         // --- REVISI: UPDATE DASHBOARD DENGAN SCOPE BARU ---
         private async Task UpdateDashboardDataAsync()
         {
-            // Buat Scope Baru -> Buat DbContext Baru -> Aman dari tabrakan Thread
+           
             using (var scope = _scopeFactory.CreateScope())
             {
-                // Minta Service dari Scope ini (Bukan dari constructor MainWindow)
                 var scopedSummaryService = scope.ServiceProvider.GetRequiredService<SummaryService>();
-
-                // Jalankan di Background Thread
                 var newDataList = await Task.Run(() => scopedSummaryService.GetLineSummary());
 
-                // Update UI (ObservableCollection harus di UI Thread, tapi karena kita pakai await, 
-                // kita kembali ke context UI secara otomatis setelah Task selesai, atau aman diakses)
-                // NAMUN, karena ObservableCollection tidak thread-safe, manipulasi sebaiknya di UI Thread.
-                // Jika error "Collection changed", gunakan Dispatcher.
-
-                // Update logika sinkronisasi data (sama seperti sebelumnya)
                 foreach (var newItem in newDataList)
                 {
                     var existingItem = _dashboardCollection.FirstOrDefault(x => x.lineProduction == newItem.lineProduction);
@@ -141,7 +132,7 @@ namespace MonitoringApp.Pages
             }
         }
 
-        // --- REVISI: UPDATE DETAIL DENGAN SCOPE BARU ---
+        
         private async Task UpdateDetailDataAsync()
         {
             if (_selectedLine == null) return;
@@ -205,8 +196,6 @@ namespace MonitoringApp.Pages
             target.UptimePercent = source.UptimePercent;
         }
 
-        // --- NAVIGATION & EVENTS (Sama seperti sebelumnya) ---
-
         private async void ShowDashboard()
         {
             DashboardPanel.Visibility = Visibility.Visible;
@@ -244,8 +233,24 @@ namespace MonitoringApp.Pages
 
         private void BtnOpenAdmin_Click(object sender, RoutedEventArgs e)
         {
-            var admin = App.ServiceProvider.GetRequiredService<AdminWindow>();
-            admin.Show();
+            var existingWindow = Application.Current.Windows.OfType<AdminWindow>().FirstOrDefault();
+            if (existingWindow != null)
+            {
+               
+                if (existingWindow.WindowState == WindowState.Minimized)
+                {
+                    existingWindow.WindowState = WindowState.Normal;
+                }
+
+               
+                existingWindow.Activate();
+            }
+            else
+            {
+                
+                var admin = App.ServiceProvider.GetRequiredService<AdminWindow>();
+                admin.Show();
+            }
         }
 
         private void BtnDownloadExcel_Click(object sender, RoutedEventArgs e)
@@ -253,6 +258,24 @@ namespace MonitoringApp.Pages
             var history = new ReportHistoryWindow();
             history.Owner = this;
             history.Show();
+        }
+
+        private void BtnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Are you sure you want to logout?", "Confirm Logout",
+                                         MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                // 1. Ambil LoginWindow baru dari DI Container
+                var loginWindow = App.ServiceProvider.GetRequiredService<LoginWindow>();
+
+                // 2. Tampilkan LoginWindow
+                loginWindow.Show();
+
+                // 3. Tutup MainWindow saat ini
+                this.Close();
+            }
         }
     }
 }

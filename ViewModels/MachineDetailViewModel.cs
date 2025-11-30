@@ -10,19 +10,19 @@ namespace MonitoringApp.ViewModels
     {
         // Data Statis (Jarang berubah) - Pakai auto-property tidak apa-apa
         public int Id { get; set; }
-        public string Line { get; set; }
-        public string Name { get; set; }
-        public string Process { get; set; }
+        public string Line { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Process { get; set; } = string.Empty;
 
         // Data Dinamis (Sering berubah) - Pakai Backing Field + OnPropertyChanged
-        private string _remark;
+        private string _remark = string.Empty;
         public string Remark
         {
             get => _remark;
             set { if (_remark != value) { _remark = value; OnPropertyChanged(); } }
         }
 
-        private string _lastUpdate;
+        private string _lastUpdate = string.Empty;
         public string LastUpdate
         {
             get => _lastUpdate;
@@ -69,21 +69,21 @@ namespace MonitoringApp.ViewModels
         public string Status => NilaiA0 == 1 ? "Active" : "Inactive";
 
         // Objek Shift (Nested ViewModels)
-        private ShiftSummaryViewModel _shift1;
+        private ShiftSummaryViewModel _shift1 = new();
         public ShiftSummaryViewModel Shift1
         {
             get => _shift1;
             set { _shift1 = value; OnPropertyChanged(); }
         }
 
-        private ShiftSummaryViewModel _shift2;
+        private ShiftSummaryViewModel _shift2 = new();
         public ShiftSummaryViewModel Shift2
         {
             get => _shift2;
             set { _shift2 = value; OnPropertyChanged(); }
         }
 
-        private ShiftSummaryViewModel _shift3;
+        private ShiftSummaryViewModel _shift3 = new();
         public ShiftSummaryViewModel Shift3
         {
             get => _shift3;
@@ -148,14 +148,14 @@ namespace MonitoringApp.ViewModels
             set { if (_count != value) { _count = value; OnPropertyChanged(); } }
         }
 
-        private string _downtime;
+        private string _downtime = "00:00:00";
         public string Downtime
         {
             get => _downtime;
             set { if (_downtime != value) { _downtime = value; OnPropertyChanged(); } }
         }
 
-        private string _uptime;
+        private string _uptime = "00:00:00";
         public string Uptime
         {
             get => _uptime;
