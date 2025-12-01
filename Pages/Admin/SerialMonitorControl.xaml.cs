@@ -27,10 +27,9 @@ namespace MonitoringApp.Pages
         private DateTime _lastShiftDate = DateTime.MinValue;
 
         // --- Logs Config ---
-        // Log File opsional jika ingin menyimpan history ke teks
         private readonly string _logFile = Path.Combine("Logs", "system_events.log");
 
-        // Flag untuk mengontrol apakah RAW data ditampilkan di layar (untuk performa)
+        // Flag untuk mengontrol apakah RAW data ditampilkan di layar
         private volatile bool _showRawData = false;
 
         public SerialMonitorControl(
@@ -69,47 +68,75 @@ namespace MonitoringApp.Pages
         }
 
         // ==================================================================
-        // 1. LOGIKA INTI (PEMISAHAN RAW vs EVENT)
+        // 1. LOGIKA INTI (PEMISAHAN RAW vs EVENT & MAPPING ID)
         // ==================================================================
         private void SerialService_DataReceived(object? sender, SerialDataEventArgs e)
         {
             // 1. Terima Data Mentah
-            // Kita pisahkan baris jika ada multiple lines dalam satu paket
+            // Pisahkan baris jika ada multiple lines dalam satu paket
             var lines = e.Text.Replace("\r\n", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (var line in lines)
             {
                 // [AREA 1] RAW SERIAL LOG
-                // Benar-benar hanya menampilkan apa yang masuk dari Port.
-                // Dikontrol oleh Checkbox agar UI tidak lag jika data sangat cepat.
                 if (_showRawData)
                 {
                     LogToRawTerminal(line);
                 }
 
-                // 2. Proses / Parsing Data
+                // 2. Proses / Parsing Data Awal
                 var result = _dataProcessingService.ProcessRawData(line);
 
-                // Jika error parsing, bisa dicatat di Event Log sebagai Warning (Opsional)
                 if (!string.IsNullOrEmpty(result.ErrorMessage) && _showRawData)
                 {
-                    // Tampilkan error parsing hanya jika sedang debugging
                     LogToRawTerminal($"[PARSE FAIL] {result.ErrorMessage}");
                 }
 
-                // 3. Jika Valid -> Simpan & Masuk Event Log
+                // 3. Jika Valid -> Lakukan Mapping ID & Simpan
                 if (result.IsValid && !result.IsDuplicate)
                 {
-                    // Simpan ke Database & CSV
-                    SaveToDatabase(result.IdKey, result.ParsedData);
+                    // --- LOGIKA BARU: MAPPING ARDUINO ID KE DATABASE ID ---
+                    
+                    // Angka pertama yang dikirim Arduino (result.IdKey) kita anggap sebagai "Machine Code"
+                    int arduinoCode = result.IdKey;
+                    int realDbId = -1;
 
-                    // [AREA 2] SAVED EVENT LOG
-                    // Ambil info shift saat ini untuk laporan
-                    var info = _csvService.GetCurrentShiftInfo();
+                    // Kita harus mencari ID Database asli berdasarkan Arduino Code ini.
+                    // Karena event ini berjalan di background thread, kita gunakan Dispatcher 
+                    // atau try-catch sederhana untuk akses EF Core (yang tidak thread-safe).
+                    // Untuk keamanan maksimal, kita lakukan lookup ini secara synchronous/hati-hati.
+                    try
+                    {
+                        // Pastikan Anda sudah menambahkan method 'GetDbIdByArduinoCode' di MachineService.cs!
+                        realDbId = _machineService.GetDbIdByArduinoCode(arduinoCode);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogToEventHistory($"[DB LOOKUP ERROR] {ex.Message}");
+                        continue; // Skip data ini jika DB error
+                    }
 
-                    // Format Pesan: "ID = Berhasil di save SQL + CSV Shift X"
-                    string successMsg = $"ID {result.IdKey} | Data Saved (SQL + CSV {info.shiftName})";
-                    LogToEventHistory(successMsg);
+                    // Cek apakah mesin terdaftar
+                    if (realDbId != -1)
+                    {
+                        // UPDATE DATA ARRAY: Ganti ID Arduino (index 0) dengan ID Database Asli
+                        // Agar fungsi SaveToDatabase menyimpan ke baris yang benar.
+                        result.ParsedData[0] = realDbId;
+
+                        // Simpan ke Database & CSV menggunakan ID ASLI (realDbId)
+                        SaveToDatabase(realDbId, result.ParsedData);
+
+                        // Log Sukses (Tampilkan Mapping)
+                        var info = _csvService.GetCurrentShiftInfo();
+                        string successMsg = $"Arduino {arduinoCode} -> ID {realDbId} | Saved ({info.shiftName})";
+                        LogToEventHistory(successMsg);
+                    }
+                    else
+                    {
+                        // JIKA TIDAK KETEMU: Tolak Data
+                        // Ini terjadi jika Arduino mengirim angka, tapi belum didaftarkan di Menu Admin "Add Machine"
+                        LogToEventHistory($"[WARNING] Unknown Machine Code: {arduinoCode}. Data Ignored.");
+                    }
                 }
             }
         }
@@ -120,7 +147,7 @@ namespace MonitoringApp.Pages
             {
                 if (data.Length < 10) return;
 
-                // A. Simpan SQL (EF Core)
+                // A. Simpan SQL (EF Core) - Gunakan ID yang sudah di-mapping (idKey)
                 _realtimeService.SaveToDatabase(
                     idKey,
                     (int)data[1], (int)data[2], (float)data[3], (float)data[4],
@@ -132,7 +159,9 @@ namespace MonitoringApp.Pages
                 {
                     try
                     {
+                        // Ambil Info Mesin (Nama, Line, dll) berdasarkan ID Database
                         var meta = _machineService.GetMachineInfoCached(idKey);
+                        
                         string status = ((int)data[1]) == 1 ? "Active" : "Inactive";
                         string tsDown = TimeSpan.FromSeconds((float)data[6]).ToString(@"hh\:mm\:ss");
                         string tsUp = TimeSpan.FromSeconds((float)data[7]).ToString(@"hh\:mm\:ss");
@@ -157,14 +186,11 @@ namespace MonitoringApp.Pages
         }
 
         // ==================================================================
-        // 2. HELPER UI LOGGING (TERPISAH)
+        // 2. HELPER UI LOGGING
         // ==================================================================
 
-        // LOG 1: Raw Terminal (Atas/Kiri) - Hanya Text Murni
         private void LogToRawTerminal(string rawText)
         {
-            // Timestamp opsional, user minta "benar-benar angka dari port", 
-            // tapi timestamp membantu debugging. Saya tambahkan kecil.
             string log = $"[{DateTime.Now:HH:mm:ss}] {rawText}";
 
             Application.Current.Dispatcher.InvokeAsync(() =>
@@ -172,13 +198,11 @@ namespace MonitoringApp.Pages
                 if (listBoxLogs == null) return;
                 listBoxLogs.Items.Insert(0, log);
 
-                // Batasi jumlah item agar memori tidak penuh
                 if (listBoxLogs.Items.Count > 100)
                     listBoxLogs.Items.RemoveAt(listBoxLogs.Items.Count - 1);
             });
         }
 
-        // LOG 2: Event History (Bawah/Kanan) - Info Sukses/System
         private void LogToEventHistory(string message)
         {
             string log = $"[{DateTime.Now:HH:mm:ss}] {message}";
@@ -188,12 +212,11 @@ namespace MonitoringApp.Pages
                 if (listBoxFilteredData == null) return;
                 listBoxFilteredData.Items.Insert(0, log);
 
-                // Batasi jumlah item
                 if (listBoxFilteredData.Items.Count > 200)
                     listBoxFilteredData.Items.RemoveAt(listBoxFilteredData.Items.Count - 1);
             });
 
-            // Opsional: Simpan Event penting ke File
+            // Opsional: Simpan log file
             Task.Run(async () => {
                 try { await File.AppendAllTextAsync(_logFile, log + Environment.NewLine); } catch { }
             });
@@ -265,7 +288,6 @@ namespace MonitoringApp.Pages
 
             LogToEventHistory("[SYSTEM] Serial Stopped.");
 
-            // Generate Excel terakhir saat stop
             var info = _csvService.GetCurrentShiftInfo();
             Task.Run(() => _csvService.FinalizeExcel(info.shiftName, info.shiftDate));
         }
@@ -281,8 +303,6 @@ namespace MonitoringApp.Pages
             MessageBox.Show("Database managed automatically.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        // Checkbox untuk mengaktifkan Raw Terminal
-        // Saya asumsikan nama Checkbox di XAML adalah 'ChkShowLog' (seperti kode sebelumnya)
         private void ChkShowLog_Checked(object sender, RoutedEventArgs e)
         {
             _showRawData = true;
