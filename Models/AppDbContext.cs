@@ -58,10 +58,6 @@ namespace MonitoringApp.Data
                 entity.Property(e => e.Password).HasColumnName("password").HasMaxLength(255).IsRequired();
                 entity.Property(e => e.Role).HasColumnName("role").HasMaxLength(20).IsRequired();
 
-                entity.HasData(
-                    new User { Id = 1, Username = "admin", Password = "123", Role = "Admin" },
-                    new User { Id = 2, Username = "user", Password = "123", Role = "User" }
-                );
             });
 
             // B. Line
