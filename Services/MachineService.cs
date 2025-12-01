@@ -29,6 +29,7 @@ namespace MonitoringApp.Services
                         select new MachineDetailViewModel
                         {
                             Id = l.Id,
+                            MachineCode = l.MachineCode,
                             Line = l.LineProduction,
                             Name = l.Name,
                             Process = l.Process,
@@ -47,6 +48,7 @@ namespace MonitoringApp.Services
             {
                 var entity = _context.Lines.FirstOrDefault(x => x.Id == id);
                 if (entity == null) return false;
+                entity.MachineCode = machineCode;
                 entity.Name = name;
                 entity.Process = process;
                 entity.LineProduction = line;
