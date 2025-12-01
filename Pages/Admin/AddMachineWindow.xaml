@@ -12,6 +12,9 @@
             <TextBlock Text="Machine Name" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,5"/>
             <TextBox x:Name="txtName" Height="35" Padding="5" Margin="0,0,0,15" BorderBrush="#D1D5DB"/>
 
+            <TextBlock Text="Arduino ID / Machine Code" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,5"/>
+            <TextBox x:Name="txtMachineCode" Height="35" Padding="5" Margin="0,0,0,15" BorderBrush="#D1D5DB"/>
+
             <TextBlock Text="Process Name" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,5"/>
             <TextBox x:Name="txtProcess" Height="35" Padding="5" Margin="0,0,0,15" BorderBrush="#D1D5DB"/>
 
