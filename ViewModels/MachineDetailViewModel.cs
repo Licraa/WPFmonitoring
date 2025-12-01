@@ -10,6 +10,7 @@ namespace MonitoringApp.ViewModels
     {
         // Data Statis (Jarang berubah) - Pakai auto-property tidak apa-apa
         public int Id { get; set; }
+        public int MachineCode { get; set; }
         public string Line { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Process { get; set; } = string.Empty;
