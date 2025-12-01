@@ -116,6 +116,7 @@ namespace MonitoringApp.Pages
                 {
                     bool success = _service.UpdateMachine(
                         selectedMachine.Id,
+                        editWindow.NewMachineCode,
                         editWindow.NewName,
                         editWindow.NewProcess,
                         editWindow.NewLine,
