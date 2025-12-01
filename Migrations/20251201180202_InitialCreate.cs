@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace MonitoringApp.Migrations
 {
     /// <inheritdoc />
@@ -17,8 +15,7 @@ namespace MonitoringApp.Migrations
                 name: "data_realtime",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    id = table.Column<int>(type: "int", nullable: false),
                     nilaiA0 = table.Column<int>(type: "int", nullable: false),
                     nilaiTerakhirA2 = table.Column<int>(type: "int", nullable: false),
                     durasiTerakhirA4 = table.Column<float>(type: "real", nullable: false),
@@ -41,6 +38,7 @@ namespace MonitoringApp.Migrations
                 {
                     id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    MachineCode = table.Column<int>(type: "int", nullable: false),
                     line = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
                     line_production = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     process = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
@@ -56,8 +54,7 @@ namespace MonitoringApp.Migrations
                 name: "shift_1",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    id = table.Column<int>(type: "int", nullable: false),
                     nilaiA0 = table.Column<int>(type: "int", nullable: false),
                     nilaiTerakhirA2 = table.Column<int>(type: "int", nullable: false),
                     durasiTerakhirA4 = table.Column<float>(type: "real", nullable: false),
@@ -78,8 +75,7 @@ namespace MonitoringApp.Migrations
                 name: "shift_2",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    id = table.Column<int>(type: "int", nullable: false),
                     nilaiA0 = table.Column<int>(type: "int", nullable: false),
                     nilaiTerakhirA2 = table.Column<int>(type: "int", nullable: false),
                     durasiTerakhirA4 = table.Column<float>(type: "real", nullable: false),
@@ -100,8 +96,7 @@ namespace MonitoringApp.Migrations
                 name: "shift_3",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    id = table.Column<int>(type: "int", nullable: false),
                     nilaiA0 = table.Column<int>(type: "int", nullable: false),
                     nilaiTerakhirA2 = table.Column<int>(type: "int", nullable: false),
                     durasiTerakhirA4 = table.Column<float>(type: "real", nullable: false),
@@ -131,15 +126,6 @@ namespace MonitoringApp.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_users", x => x.id);
-                });
-
-            migrationBuilder.InsertData(
-                table: "users",
-                columns: new[] { "id", "password", "role", "username" },
-                values: new object[,]
-                {
-                    { 1, "123", "Admin", "admin" },
-                    { 2, "123", "User", "user" }
                 });
         }
 

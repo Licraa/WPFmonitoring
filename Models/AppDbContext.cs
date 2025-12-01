@@ -91,7 +91,10 @@ namespace MonitoringApp.Data
                 entity.ToTable(tableName);
 
                 // Karena ID tidak Auto-Increment (ikut tabel Line), kita set Never
-                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .ValueGeneratedNever();
+
                 entity.HasKey(e => e.Id);
 
                 // Mapping nama properti C# (PascalCase) ke Kolom SQL (lowercase/snake_case)

@@ -64,6 +64,7 @@ namespace MonitoringApp.Services
                             select new
                             {
                                 l.Id,
+                                l.MachineCode,
                                 l.LineProduction,
                                 l.Name,
                                 l.Process,
@@ -103,6 +104,7 @@ namespace MonitoringApp.Services
                 var vm = new MachineDetailViewModel
                 {
                     Id = item.Id,
+                    MachineCode = item.MachineCode,
                     Line = item.LineProduction,
                     Name = item.Name,
                     Process = item.Process,

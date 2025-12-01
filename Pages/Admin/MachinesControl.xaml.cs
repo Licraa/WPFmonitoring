@@ -144,29 +144,14 @@ namespace MonitoringApp.Pages
 
         private void BtnAddMachine_Click(object sender, RoutedEventArgs e)
         {
-            var addWindow = new AddMachineWindow();
+            var addWindow = new AddMachineWindow(_service);
             addWindow.Owner = Window.GetWindow(this);
-            addWindow.ShowDialog();
 
-            if (addWindow.IsSaved)
+            
+            if (addWindow.ShowDialog() == true)
             {
-                bool success = _service.AddMachine(
-                    addWindow.MachineName,
-                    addWindow.Process,
-                    addWindow.Line,
-                    addWindow.Remark,
-                    addWindow.MachineCode
-                );
-
-                if (success)
-                {
-                    MessageBox.Show("New machine added successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    LoadData();
-                }
-                else
-                {
-                    MessageBox.Show("Failed to add machine.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                
+                LoadData();
             }
         }
 

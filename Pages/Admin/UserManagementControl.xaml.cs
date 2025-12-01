@@ -1,52 +1,58 @@
 using System.Windows;
+using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection; // Wajib untuk DI
 using MonitoringApp.Services;
-// using MonitoringApp.Models; // Uncomment jika error
 
 namespace MonitoringApp.Pages
 {
-    public partial class AddMachineWindow : Window
+    public partial class UserManagementControl : UserControl
     {
-        private readonly MachineService _machineService;
-
-        // Constructor Injection
-        public AddMachineWindow(MachineService machineService)
+        public UserManagementControl()
         {
             InitializeComponent();
-            _machineService = machineService;
+            LoadData();
         }
 
-        private void BtnSave_Click(object sender, RoutedEventArgs e)
+        private void LoadData()
         {
-            string name = txtName.Text;
-            string type = cmbType.Text; // Support input manual karena IsEditable="True"
-            string location = txtLocation.Text;
+            if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this)) return;
 
-            // 1. Validasi Input
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(type))
+            // Ambil service dari container
+            var userService = App.ServiceProvider.GetService<UserService>();
+            if (userService != null)
             {
-                MessageBox.Show("Nama Mesin dan Tipe harus diisi!", "Peringatan", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // 2. Panggil Service untuk simpan ke Database
-            // Pastikan method AddMachine ada di MachineService Anda
-            bool isSuccess = _machineService.AddMachine(name, type, location);
-
-            if (isSuccess)
-            {
-                MessageBox.Show("Data Mesin berhasil disimpan!", "Sukses", MessageBoxButton.OK, MessageBoxImage.Information);
-                this.DialogResult = true; // Tutup window & beritahu parent sukses
-                this.Close();
-            }
-            else
-            {
-                MessageBox.Show("Gagal menyimpan. Kemungkinan nama mesin sudah ada.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UserDataGrid.ItemsSource = userService.GetAllUsers();
             }
         }
 
-        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+        private void BtnAddUser_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            var userService = App.ServiceProvider.GetRequiredService<UserService>();
+
+            // Buka AddUserWindow
+            AddUserWindow addWin = new AddUserWindow(userService);
+            if (addWin.ShowDialog() == true)
+            {
+                LoadData(); // Refresh tabel setelah tambah
+            }
+        }
+
+        private void BtnDelete_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is int userId)
+            {
+                var result = MessageBox.Show($"Are you sure you want to delete User ID: {userId}?",
+                                             "Confirm Delete",
+                                             MessageBoxButton.YesNo,
+                                             MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    var userService = App.ServiceProvider.GetRequiredService<UserService>();
+                    userService.DeleteUser(userId);
+                    LoadData(); // Refresh tabel
+                }
+            }
         }
     }
 }

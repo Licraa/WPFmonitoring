@@ -12,8 +12,8 @@ using MonitoringApp.Data;
 namespace MonitoringApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251201161531_AddMachineCode")]
-    partial class AddMachineCode
+    [Migration("20251201180202_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -28,11 +28,8 @@ namespace MonitoringApp.Migrations
             modelBuilder.Entity("MonitoringApp.Models.DataRealtime", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<TimeSpan>("DataCh1")
                         .HasColumnType("time")
@@ -129,11 +126,8 @@ namespace MonitoringApp.Migrations
             modelBuilder.Entity("MonitoringApp.Models.Shift1", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<TimeSpan>("DataCh1")
                         .HasColumnType("time")
@@ -185,11 +179,8 @@ namespace MonitoringApp.Migrations
             modelBuilder.Entity("MonitoringApp.Models.Shift2", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<TimeSpan>("DataCh1")
                         .HasColumnType("time")
@@ -241,11 +232,8 @@ namespace MonitoringApp.Migrations
             modelBuilder.Entity("MonitoringApp.Models.Shift3", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<TimeSpan>("DataCh1")
                         .HasColumnType("time")
