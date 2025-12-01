@@ -130,5 +130,16 @@ namespace MonitoringApp.Services
         {
             _machineCache.Clear();
         }
+
+        public int GetDbIdByArduinoCode(int arduinoCode)
+        {
+            // Cari mesin yang punya MachineCode sesuai dan sedang aktif (jika pakai soft delete)
+            // Asumsi: 1 MachineCode hanya milik 1 Mesin pada satu waktu
+            var machine = _context.Lines.AsNoTracking()
+                                  .FirstOrDefault(x => x.MachineCode == arduinoCode);
+        
+            // Jika ketemu, kembalikan ID aslinya (misal 55). Jika tidak, kembalikan -1.
+            return machine != null ? machine.Id : -1;
+        }
     }
 }
