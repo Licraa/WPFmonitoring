@@ -20,11 +20,7 @@ namespace MonitoringApp.Pages
         {
             InitializeComponent();
 
-            // ❌ SALAH (Cara Lama):
-            // _service = new MachineService(); 
 
-            // ✅ BENAR (Cara Baru - Dependency Injection):
-            // Kita minta service yang sudah siap pakai (sudah ada DB Context-nya) dari App.xaml.cs
             _service = App.ServiceProvider.GetRequiredService<MachineService>();
 
             _allDataCache = new List<MachineDetailViewModel>();
@@ -158,7 +154,8 @@ namespace MonitoringApp.Pages
                     addWindow.MachineName,
                     addWindow.Process,
                     addWindow.Line,
-                    addWindow.Remark
+                    addWindow.Remark,
+                    addWindow.MachineCode
                 );
 
                 if (success)
@@ -208,6 +205,31 @@ namespace MonitoringApp.Pages
                         MessageBox.Show("Failed to delete machine.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
+            }
+        }
+
+        private void BtnCheckIds_Click(object sender, RoutedEventArgs e)
+        {
+            // Panggil fungsi pencari ID kosong
+            var missingIds = _service.GetMissingIds();
+
+            if (missingIds.Count > 0)
+            {
+                // Format tampilan agar rapi (dipisah koma)
+                string idsString = string.Join(", ", missingIds);
+
+                MessageBox.Show($"Found {missingIds.Count} Empty/Deleted IDs:\n\n{idsString}\n\n" +
+                                "You can configure your Arduino to match these IDs if needed.",
+                                "Available IDs",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("No empty IDs found within the current sequence.\nAll IDs from 1 to Max are currently in use.",
+                                "Sequence Full",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
             }
         }
     }

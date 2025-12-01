@@ -12,7 +12,7 @@ namespace MonitoringApp.Services
     {
         private readonly AppDbContext _context;
 
-       
+
         public SummaryService(AppDbContext context)
         {
             _context = context;
@@ -21,13 +21,13 @@ namespace MonitoringApp.Services
         // --- 1. DASHBOARD SUMMARY (Group by Line) ---
         public List<LineSummary> GetLineSummary()
         {
-            
+
             var rawData = (from l in _context.Lines.AsNoTracking()
                            join dr in _context.DataRealtimes.AsNoTracking() on l.Id equals dr.Id into joined
                            from dr in joined.DefaultIfEmpty()
                            select new { l.LineProduction, dr }).ToList();
 
-            
+
             var result = rawData
                 .GroupBy(x => x.LineProduction)
                 .Select(g => new LineSummary
@@ -54,10 +54,9 @@ namespace MonitoringApp.Services
         }
 
         // --- 2. MACHINE DETAIL (Per Line) ---
-        // --- 2. MACHINE DETAIL (Per Line) - OPTIMIZED ---
         public List<MachineDetailViewModel> GetMachineDetailByLine(string lineProduction)
         {
-            // 1. Ambil Data Utama Mesin (1 Query)
+
             var machines = (from l in _context.Lines.AsNoTracking()
                             join dr in _context.DataRealtimes.AsNoTracking() on l.Id equals dr.Id into joined
                             from dr in joined.DefaultIfEmpty()
@@ -69,33 +68,36 @@ namespace MonitoringApp.Services
                                 l.Name,
                                 l.Process,
                                 l.Remark,
+
                                 Realtime = dr
                             }).ToList();
-        
+
             // Jika tidak ada mesin, langsung return kosong
             if (!machines.Any()) return new List<MachineDetailViewModel>();
-        
+
             // 2. Kumpulkan ID Mesin untuk filter Shift (Persiapan BULK FETCH)
             var machineIds = machines.Select(m => m.Id).ToList();
-        
+
             // 3. Ambil Data Shift Sekaligus (Hanya 3 Query Total)
             // Menggunakan .ToDictionary agar pencarian data di memori sangat cepat (O(1))
-            
+
             var shift1Dict = _context.Shift1s.AsNoTracking()
                 .Where(x => machineIds.Contains(x.Id))
                 .ToDictionary(k => k.Id, v => v);
-        
+
             var shift2Dict = _context.Shift2s.AsNoTracking()
                 .Where(x => machineIds.Contains(x.Id))
                 .ToDictionary(k => k.Id, v => v);
-        
+
             var shift3Dict = _context.Shift3s.AsNoTracking()
                 .Where(x => machineIds.Contains(x.Id))
                 .ToDictionary(k => k.Id, v => v);
-        
+
             // 4. Gabungkan Data di Memori (CPU Client)
             var result = new List<MachineDetailViewModel>();
-        
+
+
+
             foreach (var item in machines)
             {
                 var vm = new MachineDetailViewModel
@@ -105,26 +107,27 @@ namespace MonitoringApp.Services
                     Name = item.Name,
                     Process = item.Process,
                     Remark = item.Remark ?? "-",
-        
-                    // Data Realtime
+
+
                     NilaiA0 = item.Realtime?.NilaiA0 ?? 0,
                     PartHours = item.Realtime?.PartHours ?? 0,
                     Cycle = item.Realtime?.DurasiTerakhirA4 ?? 0,
                     AvgCycle = item.Realtime?.RataRataTerakhirA4 ?? 0,
                     LastUpdate = item.Realtime != null ? item.Realtime.Last_Update.ToString("yyyy-MM-dd HH:mm:ss") : "-"
                 };
-        
-                // Assign Data Shift dari Dictionary (Tanpa Query DB lagi)
+
+
                 vm.Shift1 = MapShiftToViewModel(shift1Dict.ContainsKey(item.Id) ? shift1Dict[item.Id] : null);
                 vm.Shift2 = MapShiftToViewModel(shift2Dict.ContainsKey(item.Id) ? shift2Dict[item.Id] : null);
                 vm.Shift3 = MapShiftToViewModel(shift3Dict.ContainsKey(item.Id) ? shift3Dict[item.Id] : null);
-        
+
+
                 result.Add(vm);
             }
-        
+
             return result;
         }
-        
+
         // --- HELPER BARU: Mapping Object di Memori ---
         private ShiftSummaryViewModel MapShiftToViewModel(MachineDataBase? data)
         {
@@ -139,7 +142,7 @@ namespace MonitoringApp.Services
                     UptimePercent = 0
                 };
             }
-        
+
             return new ShiftSummaryViewModel
             {
                 Count = data.NilaiTerakhirA2,
@@ -149,10 +152,11 @@ namespace MonitoringApp.Services
                 UptimePercent = data.P_Uptime
             };
         }
+
         // --- HELPER: Generic Shift Fetcher ---
         private ShiftSummaryViewModel GetShiftSummaryLINQ<T>(DbSet<T> dbSet, int mesinId) where T : MachineDataBase
         {
-            
+
             var data = dbSet.AsNoTracking()
                             .FirstOrDefault(x => x.Id == mesinId);
 
@@ -168,7 +172,7 @@ namespace MonitoringApp.Services
                 };
             }
 
-            
+
             return new ShiftSummaryViewModel
             {
                 Count = data.NilaiTerakhirA2,

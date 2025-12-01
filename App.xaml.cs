@@ -35,6 +35,8 @@ namespace MonitoringApp
             services.AddTransient<MachineService>();
             services.AddTransient<SummaryService>();
             services.AddTransient<RealtimeDataService>();
+            services.AddTransient<SecurityHelper>();
+            services.AddTransient<UserService>();
             services.AddTransient<AuthService>();
             services.AddTransient<CsvLogService>();
             services.AddTransient<DataProcessingService>();
@@ -48,6 +50,8 @@ namespace MonitoringApp
 
             // Build Provider
             ServiceProvider = services.BuildServiceProvider();
+
+            
 
             // --- 4. JALANKAN APLIKASI ---
             try

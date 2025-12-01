@@ -7,7 +7,7 @@
              d:DesignHeight="700" d:DesignWidth="1000"
              Background="#F3F4F6">
 
-    <Grid Margin="20">
+    <Grid Margin="30">
 
         <Grid x:Name="GridLines" Visibility="Visible">
             <Grid.RowDefinitions>
@@ -15,28 +15,49 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="Production Lines Overview" FontSize="24" FontWeight="Bold" Foreground="#111827"/>
-                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <TextBlock Text="Select a production line to view detailed machine status." Foreground="#6B7280" FontSize="14"/>
-                </StackPanel>
-            </StackPanel>
+            <Grid Grid.Row="0" Margin="0,0,0,30">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <Button Click="BtnAddMachine_Click" Width="152" Height="50"
-                    Background="#2563EB" Foreground="White" BorderThickness="0"
-                    Padding="40,10" HorizontalAlignment="Center" Cursor="Hand" Margin="0,14,0,12" >
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="6"/>
-                    </Style>
-                </Button.Resources>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="+" FontWeight="Bold" Margin="0,0,8,0"/>
-                    <TextBlock Text="Add New" FontWeight="SemiBold"/>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Production Lines Overview" FontSize="26" FontWeight="Bold" Foreground="#111827"/>
+                    <TextBlock Text="Select a production line to view detailed machine status." Foreground="#6B7280" FontSize="14" Margin="0,6,0,0"/>
                 </StackPanel>
-            </Button>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Click="BtnCheckIds_Click" Height="45" Margin="0,0,15,0"
+                            Background="White" Foreground="#4B5563" BorderBrush="#D1D5DB" BorderThickness="1"
+                            Padding="15,0" Cursor="Hand" ToolTip="View deleted/available IDs">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🔍" Margin="0,0,8,0"/>
+                            <TextBlock Text="Check Empty IDs" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Click="BtnAddMachine_Click" Height="45"
+                            Background="#2563EB" Foreground="White" BorderThickness="0"
+                            Padding="20,0" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="+" FontWeight="Bold" FontSize="16" Height="26" Width="16"/>
+                            <TextBlock Text="Add New" FontWeight="SemiBold" Height="20" Width="73" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
                 <ItemsControl x:Name="ListLines">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -119,11 +140,10 @@
 
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="240" Margin="0,0,15,15" CornerRadius="8" BorderThickness="1" Padding="15" Background="White">
+                            <Border Width="280" Margin="0,0,15,15" CornerRadius="8" BorderThickness="1" Padding="15" Background="White">
                                 <Border.Effect>
                                     <DropShadowEffect Color="Black" Opacity="0.03" BlurRadius="5" ShadowDepth="1"/>
                                 </Border.Effect>
-
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="BorderBrush" Value="#FCA5A5"/>
@@ -149,20 +169,21 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="#1F2937" TextTrimming="CharacterEllipsis" MaxWidth="130" ToolTip="{Binding Name}"/>
+                                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="#1F2937" TextTrimming="CharacterEllipsis" MaxWidth="160" ToolTip="{Binding Name}"/>
 
                                             <Border Background="#F3F4F6" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Id, StringFormat='ID: {0}'}" FontSize="10" FontWeight="Bold" Foreground="#6B7280"/>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Id, StringFormat='ID: {0}'}" FontSize="10" FontWeight="Bold" Foreground="#6B7280" Margin="0,0,6,0"/>
+
+                                                    <TextBlock Text="|" FontSize="10" Foreground="#D1D5DB" Margin="0,0,6,0"/>
+
+                                                    <TextBlock Text="{Binding MachineCode, StringFormat='CODE: {0}'}" FontSize="10" FontWeight="Bold" Foreground="#6B7280"/>
+                                                </StackPanel>
                                             </Border>
+
                                         </StackPanel>
 
-
-                                        <Button Grid.Column="1" Content="✎" 
-                                                Width="24" Height="24" 
-                                                Background="Transparent" BorderThickness="0" 
-                                                Foreground="#9CA3AF" FontWeight="Bold" Cursor="Hand"
-                                                Click="BtnEditMachine_Click" 
-                                                ToolTip="Edit Machine Details">
+                                        <Button Grid.Column="1" Content="✎" Width="24" Height="24" Background="Transparent" BorderThickness="0" Foreground="#9CA3AF" FontWeight="Bold" Cursor="Hand" Click="BtnEditMachine_Click" ToolTip="Edit Machine">
                                             <Button.Style>
                                                 <Style TargetType="Button">
                                                     <Style.Triggers>
@@ -174,12 +195,7 @@
                                             </Button.Style>
                                         </Button>
 
-                                        <Button Grid.Column="1" Content="🗑" 
-                                                Width="24" Height="24" Margin="50,0,0,0"
-                                                Background="Transparent" BorderThickness="0" 
-                                                Foreground="#FCA5A5" FontWeight="Bold" Cursor="Hand"
-                                                Click="BtnDeleteMachine_Click" 
-                                                ToolTip="Delete Machine (Permanent)">
+                                        <Button Grid.Column="1" Content="🗑" Width="24" Height="24" Margin="50,0,0,0" Background="Transparent" BorderThickness="0" Foreground="#FCA5A5" FontWeight="Bold" Cursor="Hand" Click="BtnDeleteMachine_Click" ToolTip="Delete Machine">
                                             <Button.Style>
                                                 <Style TargetType="Button">
                                                     <Style.Triggers>
@@ -207,7 +223,6 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-
                                             <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="Bold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">

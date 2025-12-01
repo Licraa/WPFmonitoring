@@ -1,7 +1,7 @@
-<Window x:Class="MonitoringApp.Pages.AddMachineWindow"
+<Window x:Class="MonitoringApp.Pages.AddUserWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Register New Machine" Height="511" Width="408"
+        Title="Add New User" Height="474" Width="352"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         Background="#F9FAFB" FontFamily="Segoe UI">
 
@@ -23,61 +23,51 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
-        <Border Margin="30" Background="White" CornerRadius="12">
+    <Grid Margin="0,0,5,5">
+        <Border Margin="25" Background="White" CornerRadius="12">
             <Border.Effect>
                 <DropShadowEffect Color="Black" Direction="270" ShadowDepth="4" Opacity="0.05" BlurRadius="20"/>
             </Border.Effect>
 
             <StackPanel VerticalAlignment="Center" Margin="25">
-
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,25">
-                    <Border Width="4" Height="24" Background="#10B981" CornerRadius="2" Margin="0,0,10,0"/>
-                    <TextBlock Text="Register Machine" FontSize="20" FontWeight="Bold" Foreground="#111827"/>
+                    <Border Width="4" Height="24" Background="#2563EB" CornerRadius="2" Margin="0,0,10,0"/>
+                    <TextBlock Text="Add New User" FontSize="20" FontWeight="Bold" Foreground="#111827"/>
                 </StackPanel>
 
-                <TextBlock Text="Machine Name" Style="{StaticResource LabelStyle}"/>
+                <TextBlock Text="Username" Style="{StaticResource LabelStyle}"/>
                 <Border Style="{StaticResource InputBorderStyle}">
-                    <TextBox x:Name="txtName" BorderThickness="0" Background="Transparent" 
-                             VerticalContentAlignment="Center" Padding="8,6" Height="30"
-                             ToolTip="Ex: Conveyor Belt 01"/>
+                    <TextBox x:Name="txtUsername" BorderThickness="0" Background="Transparent" 
+                             VerticalContentAlignment="Center" Padding="8,6" Height="30"/>
                 </Border>
 
-                <TextBlock Text="Machine Type" Style="{StaticResource LabelStyle}"/>
+                <TextBlock Text="Password" Style="{StaticResource LabelStyle}"/>
                 <Border Style="{StaticResource InputBorderStyle}">
-                    <ComboBox x:Name="cmbType" BorderThickness="0" Background="Transparent" 
-                              Height="30" Padding="8,6" IsEditable="True">
-                        <ComboBoxItem Content="CNC Machine"/>
-                        <ComboBoxItem Content="Conveyor Belt"/>
-                        <ComboBoxItem Content="Robotic Arm"/>
-                        <ComboBoxItem Content="Sensor Unit"/>
-                        <ComboBoxItem Content="Hydraulic Press"/>
+                    <PasswordBox x:Name="txtPassword" BorderThickness="0" Background="Transparent" 
+                                 VerticalContentAlignment="Center" Padding="8,6" Height="30"/>
+                </Border>
+
+                <TextBlock Text="Role / Access Level" Style="{StaticResource LabelStyle}"/>
+                <Border Style="{StaticResource InputBorderStyle}" Background="#F3F4F6">
+                    <ComboBox x:Name="comboRole" BorderThickness="0" Background="Transparent" 
+                              Height="30" Padding="8,6" IsEnabled="False" Foreground="#6B7280">
+                        <ComboBoxItem Content="User" IsSelected="True"/>
                     </ComboBox>
                 </Border>
 
-                <TextBlock Text="Location / Zone" Style="{StaticResource LabelStyle}"/>
-                <Border Style="{StaticResource InputBorderStyle}">
-                    <TextBox x:Name="txtLocation" BorderThickness="0" Background="Transparent" 
-                             VerticalContentAlignment="Center" Padding="8,6" Height="30"
-                             ToolTip="Ex: Production Floor A"/>
-                </Border>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                     <Button Content="Cancel" Click="BtnCancel_Click" 
                             Background="Transparent" Foreground="#6B7280" BorderThickness="0"
                             FontWeight="SemiBold" Cursor="Hand" Margin="0,0,15,0"/>
 
-                    <Button Content="Save Machine" Click="BtnSave_Click" 
+                    <Button Content="Create Account" Click="BtnSave_Click" 
                             Width="130" Height="40" Cursor="Hand"
-                            Background="#10B981" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                            Background="#2563EB" Foreground="White" FontWeight="Bold" BorderThickness="0">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="6"/>
                             </Style>
                         </Button.Resources>
-                        <Button.Effect>
-                            <DropShadowEffect Color="#10B981" Direction="270" ShadowDepth="2" Opacity="0.3" BlurRadius="8"/>
-                        </Button.Effect>
                     </Button>
                 </StackPanel>
             </StackPanel>

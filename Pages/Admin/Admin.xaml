@@ -61,12 +61,13 @@
                     <Button x:Name="btnNavDashboard" Content="📊  Dashboard" Style="{StaticResource SidebarBtn}" Click="BtnNavDashboard_Click"/>
                     <Button x:Name="btnNavSerial" Content="🔌  Serial Monitor" Style="{StaticResource SidebarBtn}" Click="BtnNavSerial_Click"/>
                     <Button x:Name="btnNavMachines" Content="🏭  Machines" Style="{StaticResource SidebarBtn}" Click="BtnNavMachines_Click"/>
+                    <Button x:Name="btnNavUsers" Content="👥  Manage Users" Style="{StaticResource SidebarBtn}" Click="BtnNavUsers_Click"/>
                     <Button x:Name="btnNavSettings" Content="⚙️  Settings" Style="{StaticResource SidebarBtn}" Click="BtnNavSettings_Click"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,24">
                     <Border Height="1" Background="#1F2937" Margin="20,0,20,16"/>
-                    <Button Content="🚪  Logout" Style="{StaticResource SidebarBtn}" Foreground="#EF4444" Click="LogoutButton_Click"/>
+                    <Button Content="🚪  Logout" Style="{StaticResource SidebarBtn}" Foreground="#EF4444" Click="LogoutButton_Click" Width="248"/>
                     <TextBlock Text="v1.0.0 Stable" Foreground="#374151" FontSize="10" HorizontalAlignment="Center" Margin="0,16,0,0"/>
                 </StackPanel>
             </Grid>

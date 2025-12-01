@@ -13,6 +13,7 @@ namespace MonitoringApp.Pages
         private DashboardControl? _dashboardView;
         private SerialMonitorControl? _serialView;
         private MachinesControl? _machinesView;
+        private UserManagementControl? _usersView;
 
         public Admin()
         {
@@ -41,7 +42,7 @@ namespace MonitoringApp.Pages
         {
             if (_serialView == null)
             {
-                
+
                 _serialView = App.ServiceProvider.GetRequiredService<SerialMonitorControl>();
             }
 
@@ -53,13 +54,24 @@ namespace MonitoringApp.Pages
         {
             if (_machinesView == null)
             {
-                
+
                 _machinesView = new MachinesControl();
             }
 
             MainContentArea.Content = _machinesView;
             SetActiveButton(btnNavMachines);
         }
+
+        private void NavigateToUsers()
+        {
+            if (_usersView == null)
+            {
+                _usersView = new UserManagementControl();
+            }
+            MainContentArea.Content = _usersView;
+            SetActiveButton(btnNavUsers);
+        }
+        private void BtnNavUsers_Click(object sender, RoutedEventArgs e) => NavigateToUsers();
 
         private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
         {
@@ -78,9 +90,9 @@ namespace MonitoringApp.Pages
             var result = MessageBox.Show("Are you sure you want to logout?", "Logout", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result == MessageBoxResult.Yes)
             {
-                
 
-                this.Close(); 
+
+                this.Close();
             }
         }
 
@@ -92,6 +104,7 @@ namespace MonitoringApp.Pages
             ResetButtonStyle(btnNavSerial);
             ResetButtonStyle(btnNavMachines);
             ResetButtonStyle(btnNavSettings);
+            ResetButtonStyle(btnNavUsers);
 
             activeButton.Foreground = Brushes.White;
             activeButton.Background = new SolidColorBrush(Color.FromRgb(31, 41, 55)); // #1F2937
