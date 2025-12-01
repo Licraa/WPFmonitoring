@@ -7,34 +7,46 @@ using MonitoringApp.Models;
 
 namespace MonitoringApp.Data
 {
-    // Class ini KHUSUS dipanggil saat kamu mengetik 'dotnet ef migrations...'
-    // Ini membuat EF Core mengabaikan App.xaml dan LoginWindow sepenuhnya.
     public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            // 1. Dapatkan folder tempat perintah dijalankan
-            var basePath = Directory.GetCurrentDirectory();
+            var basePath = AppDomain.CurrentDomain.BaseDirectory;
 
-            // 2. Coba baca appsettings.json
+            // 2. BUILD CONFIGURATION
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(basePath)
-                .AddJsonFile("appsettings.json", optional: true) // optional=true biar gak crash
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .Build();
 
-            // 3. Ambil Connection String
-            // Trik: Jika appsettings.json gagal dibaca tool, kita pakai string manual sebagai cadangan
+            // 3. AMBIL CONNECTION STRING
             var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-            // GANTI STRING INI SESUAI SQL SERVER KAMU JIKA PERLU
+            // 4. VALIDASI KONEKSI (Mencegah Silent Failure)
             if (string.IsNullOrEmpty(connectionString))
             {
-                connectionString = "Server=localhost;Database=MonitoringDB;Trusted_Connection=True;TrustServerCertificate=True;";
+                throw new InvalidOperationException(
+                    "Connection string 'DefaultConnection' tidak ditemukan di appsettings.json. " +
+                    "Pastikan file konfigurasi ada dan benar.");
             }
 
-            // 4. Buat Context
+            // 5. KONFIGURASI DB CONTEXT DENGAN RETRY LOGIC
             var builder = new DbContextOptionsBuilder<AppDbContext>();
-            builder.UseSqlServer(connectionString);
+
+            builder.UseSqlServer(connectionString, sqlOptions =>
+            {
+                // [PENTING] EnableRetryOnFailure:
+                // Ini membuat EF Core otomatis mencoba connect ulang jika gagal karena 
+                // masalah jaringan sesaat (transient error) sebelum melempar error.
+                sqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,             // Coba ulang maksimal 5 kali
+                    maxRetryDelay: TimeSpan.FromSeconds(10), // Tunggu maksimal 10 detik antar percobaan
+                    errorNumbersToAdd: null       // Gunakan list error default SQL Server
+                );
+
+                // Opsional: Set timeout command lebih panjang jika query berat
+                sqlOptions.CommandTimeout(30);
+            });
 
             return new AppDbContext(builder.Options);
         }
