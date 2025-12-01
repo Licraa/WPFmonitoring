@@ -24,6 +24,13 @@ namespace MonitoringApp.Pages
                 return;
             }
 
+            if (!int.TryParse(txtMachineCode.Text, out int code))
+            {
+                MessageBox.Show("Arduino ID must be a number!");
+                return;
+            }
+
+            MachineCode = code;
             MachineName = txtName.Text;
             Process = txtProcess.Text;
             Line = txtLine.Text;
