@@ -29,9 +29,16 @@
                 <TextBlock Text="EDIT MODE" Foreground="#666" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,10"/>
                 <Border Background="#F3F4F6" CornerRadius="6" Padding="10,5" HorizontalAlignment="Center" Margin="0,0,0,15" BorderBrush="#E5E7EB" BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="MACHINE ID: " FontSize="12" FontWeight="Bold" Foreground="#9CA3AF"/>
-                        <TextBlock Text="{Binding Id}" FontSize="12" FontWeight="Bold" Foreground="#4B5563"/>
-                    </StackPanel>
+                            <TextBlock Text="DATABASE ID: " FontSize="12" FontWeight="Bold" Foreground="#9CA3AF"/>
+                            <TextBlock Text="{Binding Id}" FontSize="12" FontWeight="Bold" Foreground="#4B5563" Margin="0,0,20,0"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                            <TextBlock Text="ARDUINO ID: " FontSize="12" FontWeight="Bold" Foreground="#2563EB" VerticalAlignment="Center"/>
+                            <TextBox x:Name="txtMachineCode" Text="{Binding MachineCode}" Width="50" FontSize="14" FontWeight="Bold" 
+                                     Foreground="#2563EB" Background="White" BorderBrush="#2563EB" BorderThickness="1" 
+                                     Padding="4,0" VerticalContentAlignment="Center" Margin="5,0,0,0"/>
+                        </StackPanel>
                 </Border>
 
                 <StackPanel Orientation="Vertical" Margin="0,0,0,20">
