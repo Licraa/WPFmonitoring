@@ -21,6 +21,9 @@ namespace MonitoringApp.Pages
         private readonly CsvLogService _csvService;
         private readonly IServiceScopeFactory _scopeFactory;
 
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _logQueue = new();
+        private bool _isProcessingQueue = false;
+
         // --- Concurrency Control (Solusi DbUpdateException) ---
         // Ini memastikan data dari mesin yang sama diproses antre (satu per satu)
         private static readonly ConcurrentDictionary<int, object> _processingLocks = new();
@@ -186,20 +189,51 @@ namespace MonitoringApp.Pages
             {
                 if (listBoxLogs == null) return;
                 listBoxLogs.Items.Insert(0, log);
-                if (listBoxLogs.Items.Count > 100) listBoxLogs.Items.RemoveAt(listBoxLogs.Items.Count - 1);
+                if (listBoxLogs.Items.Count > 29) listBoxLogs.Items.RemoveAt(listBoxLogs.Items.Count - 1);
             });
         }
 
         private void LogToEventHistory(string message)
         {
             string log = $"[{DateTime.Now:HH:mm:ss}] {message}";
-            Application.Current.Dispatcher.InvokeAsync(() =>
+
+            // Perbaikan UI: Gunakan Dispatcher dengan prioritas rendah agar tidak membebani UI utama
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (listBoxFilteredData == null) return;
+
                 listBoxFilteredData.Items.Insert(0, log);
-                if (listBoxFilteredData.Items.Count > 200) listBoxFilteredData.Items.RemoveAt(listBoxFilteredData.Items.Count - 1);
-            });
-            Task.Run(async () => { try { await File.AppendAllTextAsync(_logFile, log + Environment.NewLine); } catch { } });
+
+                // Tetap batasi 50, ini sudah bagus
+                if (listBoxFilteredData.Items.Count > 20)
+                    listBoxFilteredData.Items.RemoveAt(listBoxFilteredData.Items.Count - 1);
+
+            }), System.Windows.Threading.DispatcherPriority.Background);
+
+            // Perbaikan Log File: Jangan pakai Task.Run untuk SETIAP baris. 
+            // Masukkan ke antrean saja.
+            _logQueue.Enqueue(log);
+
+            // Jalankan proses tulis file secara berkala jika belum berjalan
+            if (!_isProcessingQueue)
+            {
+                ProcessLogQueue();
+            }
+        }
+        private async void ProcessLogQueue()
+        {
+            _isProcessingQueue = true;
+            try
+            {
+                while (_logQueue.TryDequeue(out string logItem))
+                {
+                    await File.AppendAllTextAsync(_logFile, logItem + Environment.NewLine);
+                    // Beri jeda sangat kecil agar CPU tidak 100% jika antrean sangat banyak
+                    await Task.Delay(10);
+                }
+            }
+            catch { }
+            finally { _isProcessingQueue = false; }
         }
 
         private void ClockTimer_Tick(object? sender, EventArgs e)
