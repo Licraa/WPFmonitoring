@@ -1,21 +1,21 @@
-﻿using System;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Data;
 using MonitoringApp.Models;
+using System;
+using System.Diagnostics;
+using System.Linq;
 
 namespace MonitoringApp.Services
 {
     public class RealtimeDataService
     {
-        private readonly AppDbContext _context;
+        // PENTING: Menggunakan IDbContextFactory agar tidak terjadi kebocoran koneksi
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        // ✅ PERBAIKAN DI SINI:
-        // Jangan minta string connectionString. Mintalah AppDbContext.
-        // DI Container akan otomatis menyediakannya.
-        public RealtimeDataService(AppDbContext context)
+        public RealtimeDataService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
+            Debug.WriteLine("Realtime service STARTED with Factory Pattern");
         }
 
         public void SaveToDatabase(
@@ -30,52 +30,50 @@ namespace MonitoringApp.Services
             int p_datach1,
             int p_uptime)
         {
-            try
+            // Buka koneksi baru yang otomatis ditutup setelah block 'using' selesai
+            using (var context = _contextFactory.CreateDbContext())
             {
-                // Konversi Detik ke TimeSpan
-                TimeSpan ts_dataCh1 = TimeSpan.FromSeconds(dataCh1_Sec);
-                TimeSpan ts_uptime = TimeSpan.FromSeconds(uptime_Sec);
-
-                // 1. Simpan ke Tabel Utama (DataRealtime)
-                UpsertData(_context.DataRealtimes, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-
-                // 2. Simpan ke Tabel Shift yang Sesuai (Logic Jam Kerja)
-                TimeSpan now = DateTime.Now.TimeOfDay;
-                if (now >= new TimeSpan(6, 30, 0) && now < new TimeSpan(14, 30, 0))
+                try
                 {
-                    UpsertData(_context.Shift1s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-                }
-                else if (now >= new TimeSpan(14, 30, 0) && now < new TimeSpan(22, 30, 0))
-                {
-                    UpsertData(_context.Shift2s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-                }
-                else
-                {
-                    UpsertData(_context.Shift3s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-                }
+                    TimeSpan ts_dataCh1 = TimeSpan.FromSeconds(dataCh1_Sec);
+                    TimeSpan ts_uptime = TimeSpan.FromSeconds(uptime_Sec);
 
-                _context.SaveChanges(); // Eksekusi ke DB
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
-            }
+                    // 1. Simpan ke Tabel Utama
+                    UpsertData(context.DataRealtimes, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+
+                    // 2. Simpan ke Tabel Shift
+                    TimeSpan now = DateTime.Now.TimeOfDay;
+                    if (now >= new TimeSpan(6, 30, 0) && now < new TimeSpan(14, 30, 0))
+                    {
+                        UpsertData(context.Shift1s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+                    }
+                    else if (now >= new TimeSpan(14, 30, 0) && now < new TimeSpan(22, 30, 0))
+                    {
+                        UpsertData(context.Shift2s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+                    }
+                    else
+                    {
+                        UpsertData(context.Shift3s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+                    }
+
+                    context.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
+                }
+            } // Koneksi dan memori langsung dibersihkan di sini
         }
 
-        // Helper Generic untuk UPSERT (Update or Insert)
         private void UpsertData<T>(DbSet<T> dbSet, int id, int a0, int a2, float a4, float avgA4, int ph, TimeSpan ch1, TimeSpan up, int pCh1, int pUp)
             where T : MachineDataBase, new()
         {
             var data = dbSet.FirstOrDefault(x => x.Id == id);
-
             if (data == null)
             {
-                // INSERT BARU
                 data = new T { Id = id };
                 dbSet.Add(data);
             }
-
-            // UPDATE DATA
             data.NilaiA0 = a0;
             data.NilaiTerakhirA2 = a2;
             data.DurasiTerakhirA4 = a4;

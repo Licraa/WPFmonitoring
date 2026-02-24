@@ -1,8 +1,10 @@
 ﻿using System;
-using System.IO; // WAJIB: Untuk menyimpan file log
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Data;
 using MonitoringApp.Pages;
 using MonitoringApp.Services;
@@ -14,7 +16,7 @@ namespace MonitoringApp
 {
     public partial class App : Application
     {
-        // Container Service Provider
+        // Container Service Provider untuk akses global
         public static IServiceProvider ServiceProvider { get; private set; } = null!;
 
         protected override void OnStartup(StartupEventArgs e)
@@ -23,15 +25,33 @@ namespace MonitoringApp
             this.DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
-            base.OnStartup(e); 
+            base.OnStartup(e);
 
             var services = new ServiceCollection();
 
-            // --- 2. DAFTARKAN SERVICES ---
-            services.AddDbContext<AppDbContext>();
-            services.AddSingleton<SerialPortService>();
+            // --- 2. BACA KONFIGURASI appsettings.json (Hanya Sekali) ---
+            var configBuilder = new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+            var configuration = configBuilder.Build();
+            string connectionString = configuration.GetConnectionString("DefaultConnection");
 
-            // Core Services
+            // --- 3. DAFTARKAN SERVICES ---
+            // SOLUSI MEMORY LEAK: Gunakan AddDbContextFactory
+            services.AddDbContextFactory<AppDbContext>(options => {
+                options.UseSqlServer(connectionString, sqlOptions => {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null);
+                });
+            });
+
+            // Services bersifat Singleton
+            services.AddSingleton<SerialPortService>();
+            services.AddSingleton<HardwareMonitorService>();
+
+            // Services bersifat Transient
             services.AddTransient<MachineService>();
             services.AddTransient<SummaryService>();
             services.AddTransient<RealtimeDataService>();
@@ -42,7 +62,7 @@ namespace MonitoringApp
             services.AddTransient<DataProcessingService>();
             services.AddTransient<DashboardControl>();
 
-            // --- 3. DAFTARKAN UI ---
+            // --- 4. DAFTARKAN UI ---
             services.AddTransient<LoginWindow>();
             services.AddTransient<MainWindow>();
             services.AddTransient<AdminWindow>();
@@ -51,9 +71,7 @@ namespace MonitoringApp
             // Build Provider
             ServiceProvider = services.BuildServiceProvider();
 
-            
-
-            // --- 4. JALANKAN APLIKASI ---
+            // --- 5. JALANKAN APLIKASI ---
             try
             {
                 var loginWindow = ServiceProvider.GetRequiredService<LoginWindow>();
@@ -61,59 +79,38 @@ namespace MonitoringApp
             }
             catch (Exception ex)
             {
-                // Tangkap jika gagal saat start awal (misal database error parah)
                 LogToCrashFile($"Startup Failed: {ex.Message}");
                 MessageBox.Show($"Startup Error: {ex.Message}", "Critical", MessageBoxButton.OK, MessageBoxImage.Error);
                 Shutdown();
             }
         }
 
-        // --- HANDLER ERROR UI (WPF) ---
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             string errorMessage = $"[UI ERROR] {DateTime.Now}: {e.Exception.Message}\nStack Trace: {e.Exception.StackTrace}";
-
-            // 1. Simpan ke File
             LogToCrashFile(errorMessage);
-
-            // 2. Info ke User
             MessageBox.Show($"Terjadi kesalahan aplikasi:\n{e.Exception.Message}", "Application Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-
-            // 3. Cegah Crash
             e.Handled = true;
         }
 
-        // --- HANDLER ERROR SYSTEM/BACKGROUND ---
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             Exception ex = (Exception)e.ExceptionObject;
             string errorMessage = $"[SYSTEM CRASH] {DateTime.Now}: {ex.Message}\nStack Trace: {ex.StackTrace}";
-
-            // 1. Simpan ke File
             LogToCrashFile(errorMessage);
-
-            // 2. Info ke User (Aplikasi akan tutup setelah ini)
             MessageBox.Show("Terjadi kesalahan fatal pada sistem. Aplikasi akan ditutup.", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        // --- HELPER: TULIS LOG KE FILE ---
         private void LogToCrashFile(string message)
         {
             try
             {
-                // Simpan di folder "Logs" di sebelah file .exe
                 string folder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
                 if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-
                 string filePath = Path.Combine(folder, "crash_report.log");
-
-                // Tambahkan pesan error ke baris baru (Append)
                 File.AppendAllText(filePath, message + Environment.NewLine + "--------------------------------------------------" + Environment.NewLine);
             }
-            catch
-            {
-                // Jika logger gagal, diam saja agar tidak infinite loop error
-            }
+            catch { }
         }
     }
 }

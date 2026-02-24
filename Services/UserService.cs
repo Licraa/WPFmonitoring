@@ -1,7 +1,8 @@
-using System.Collections.Generic;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Data;
 using MonitoringApp.Models;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MonitoringApp.Services
 {
@@ -20,7 +21,10 @@ namespace MonitoringApp.Services
         // Ambil semua user
         public List<User> GetAllUsers()
         {
-            return _context.Users.OrderBy(u => u.Username).ToList();
+            return _context.Users
+                .AsNoTracking()
+                .OrderBy(u => u.Username)
+                .ToList();
         }
 
         // Tambah User Baru (Auto Hash Password)

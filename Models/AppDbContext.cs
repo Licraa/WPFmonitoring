@@ -30,17 +30,6 @@ namespace MonitoringApp.Data
         // --- 2. KONFIGURASI KONEKSI ---
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            if (!optionsBuilder.IsConfigured)
-            {
-                var configBuilder = new ConfigurationBuilder()
-                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-                var configuration = configBuilder.Build();
-                var connectionString = configuration.GetConnectionString("DefaultConnection");
-
-                optionsBuilder.UseSqlServer(connectionString);
-            }
         }
 
         // --- 3. MAPPING TABEL ---

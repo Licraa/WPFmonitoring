@@ -182,15 +182,30 @@ namespace MonitoringApp.Services
         // --- 5. INFO & HELPERS ---
         public (string Name, string Line, string Process) GetMachineInfoCached(int id)
         {
+
+            if (_machineCache.Count > 100)
+            {
+                _machineCache.Clear();
+            }
+
             if (_machineCache.TryGetValue(id, out var info)) return info;
 
-            var machine = _context.Lines.Where(l => l.Id == id).Select(l => new { l.Name, l.LineProduction, l.Process }).FirstOrDefault();
+            
+            var machine = _context.Lines
+                .AsNoTracking()
+                .Where(l => l.Id == id)
+                .Select(l => new { l.Name, l.LineProduction, l.Process })
+                .FirstOrDefault();
+
             if (machine != null)
             {
                 var res = (machine.Name ?? "Unknown", machine.LineProduction ?? "-", machine.Process ?? "-");
+
+              
                 _machineCache[id] = res;
                 return res;
             }
+
             return ("Unknown", "-", "-");
         }
 
@@ -202,18 +217,15 @@ namespace MonitoringApp.Services
 
         public int GetNextAvailableId()
         {
-            // 1. Cek apakah ada ID yang bolong/hilang (menggunakan method GetMissingIds yg sudah Anda buat)
             var missingIds = GetMissingIds();
 
             if (missingIds.Count > 0)
             {
-                // Jika ada ID bolong (misal 1, 3, 4 -> bolong 2), pakai yg terkecil (2)
                 return missingIds.First();
             }
 
-            // 2. Jika tidak ada yang bolong, ambil ID terbesar + 1
-            // Gunakan (int?) agar aman jika tabel kosong
-            int maxId = _context.Lines.Max(x => (int?)x.MachineCode) ?? 0;
+            // Gunakan .AsNoTracking() di sini juga
+            int maxId = _context.Lines.AsNoTracking().Max(x => (int?)x.MachineCode) ?? 0;
 
             return maxId + 1;
         }

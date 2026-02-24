@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent; // WAJIB: Untuk Locking
+using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
@@ -15,26 +15,26 @@ namespace MonitoringApp.Pages
 {
     public partial class SerialMonitorControl : UserControl
     {
-        // --- Dependency Services ---
         private readonly SerialPortService _serialService;
         private readonly DataProcessingService _dataProcessingService;
         private readonly CsvLogService _csvService;
         private readonly IServiceScopeFactory _scopeFactory;
 
-        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _logQueue = new();
+        // Antrean untuk Log UI dan File Log Sistem
+        private readonly ConcurrentQueue<string> _logQueue = new();
         private bool _isProcessingQueue = false;
 
-        // --- Concurrency Control (Solusi DbUpdateException) ---
-        // Ini memastikan data dari mesin yang sama diproses antre (satu per satu)
-        private static readonly ConcurrentDictionary<int, object> _processingLocks = new();
+        // Antrean khusus untuk data Arduino agar tidak menghambat thread utama (Gen 2 optimization)
+        private readonly ConcurrentQueue<(int id, object[] data, (string Name, string Line, string Process) meta)> _csvBuffer = new();
+        private bool _isCsvWorkerRunning = false;
 
-        // --- State ---
+        // Melacak shift yang sedang aktif untuk deteksi perubahan (Auto Convert Excel)
+        private string _activeShiftName;
+        private DateTime _activeShiftDate;
+
+        private readonly ConcurrentDictionary<int, object> _processingLocks = new();
         private DispatcherTimer _clockTimer;
         private bool _subscribed = false;
-        private string _lastShiftName = "";
-        private DateTime _lastShiftDate = DateTime.MinValue;
-
-        // --- Logs Config ---
         private readonly string _logFile = Path.Combine("Logs", "system_events.log");
         private volatile bool _showRawData = false;
 
@@ -52,73 +52,82 @@ namespace MonitoringApp.Pages
             _csvService = csvService;
             _scopeFactory = scopeFactory;
 
-            InitPorts();
+            // Inisialisasi info shift saat pertama kali dijalankan
+            var initialInfo = _csvService.GetCurrentShiftInfo();
+            _activeShiftName = initialInfo.shiftName;
+            _activeShiftDate = initialInfo.shiftDate;
 
-            var info = _csvService.GetCurrentShiftInfo();
-            _lastShiftName = info.shiftName;
-            _lastShiftDate = info.shiftDate;
+            InitPorts();
             UpdateDbStatusUI(true);
 
             _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _clockTimer.Tick += ClockTimer_Tick;
+            _clockTimer.Tick += (s, e) => UpdateShiftDisplay();
             _clockTimer.Start();
-
-            UpdateShiftDisplay();
 
             this.Loaded += SerialMonitorControl_Loaded;
             this.Unloaded += SerialMonitorControl_Unloaded;
         }
 
+        private void EnsureSubscribed()
+        {
+            if (!_subscribed)
+            {
+                WeakEventManager<SerialPortService, SerialDataEventArgs>.AddHandler(
+                    _serialService, "DataReceived", SerialService_DataReceived);
+                _subscribed = true;
+            }
+        }
+
         private void SerialService_DataReceived(object? sender, SerialDataEventArgs e)
         {
-            var lines = e.Text.Replace("\r\n", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            // 1. Deteksi Perubahan Shift secara otomatis untuk konversi Excel
+            var currentInfo = _csvService.GetCurrentShiftInfo();
+            if (currentInfo.shiftName != _activeShiftName || currentInfo.shiftDate != _activeShiftDate)
+            {
+                string oldShiftName = _activeShiftName;
+                DateTime oldShiftDate = _activeShiftDate;
 
+                _activeShiftName = currentInfo.shiftName;
+                _activeShiftDate = currentInfo.shiftDate;
+
+                // Konversi file shift sebelumnya ke Excel di latar belakang
+                Task.Run(async () => {
+                    await Task.Delay(2000); // Tunggu sisa tulis CSV terakhir selesai
+                    _csvService.FinalizeExcel(oldShiftName, oldShiftDate);
+                });
+            }
+
+            // 2. Proses data Arduino (Masuk per 1 detik)
+            var lines = e.Text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var line in lines)
             {
                 if (_showRawData) LogToRawTerminal(line);
 
                 var result = _dataProcessingService.ProcessRawData(line);
-
-                if (!string.IsNullOrEmpty(result.ErrorMessage) && _showRawData)
-                {
-                    LogToRawTerminal($"[PARSE FAIL] {result.ErrorMessage}");
-                }
-
                 if (result.IsValid && !result.IsDuplicate)
                 {
-                    // === SOLUSI 1: LOCKING (Mencegah Tabrakan Data / DbUpdateException) ===
-                    // Kita kunci proses berdasarkan ID Arduino.
-                    // Jika ID 101 mengirim 5 data sekaligus, mereka akan diproses antre, bukan barengan.
                     var lockObj = _processingLocks.GetOrAdd(result.IdKey, _ => new object());
-
                     lock (lockObj)
                     {
                         using (var scope = _scopeFactory.CreateScope())
                         {
-                            var scopedMachineService = scope.ServiceProvider.GetRequiredService<MachineService>();
-                            var scopedRealtimeService = scope.ServiceProvider.GetRequiredService<RealtimeDataService>();
+                            var machineService = scope.ServiceProvider.GetRequiredService<MachineService>();
+                            var realtimeService = scope.ServiceProvider.GetRequiredService<RealtimeDataService>();
 
-                            int arduinoCode = result.IdKey;
-                            int realDbId = -1;
+                            int dbId = machineService.GetDbIdByArduinoCode(result.IdKey);
+                            if (dbId != -1)
+                            {
+                                // Simpan SQL (Instan)
+                                realtimeService.SaveToDatabase(dbId, (int)result.ParsedData[1], (int)result.ParsedData[2],
+                                    (float)result.ParsedData[3], (float)result.ParsedData[4], (int)result.ParsedData[5],
+                                    (float)result.ParsedData[6], (float)result.ParsedData[7], (int)result.ParsedData[8], (int)result.ParsedData[9]);
 
-                            try
-                            {
-                                realDbId = scopedMachineService.GetDbIdByArduinoCode(arduinoCode);
-                            }
-                            catch (Exception ex)
-                            {
-                                LogToEventHistory($"[DB LOOKUP ERROR] {ex.Message}");
-                                continue;
-                            }
+                                // Masukkan ke antrean CSV (Background)
+                                var meta = machineService.GetMachineInfoCached(dbId);
+                                _csvBuffer.Enqueue((dbId, result.ParsedData, meta));
+                                if (!_isCsvWorkerRunning) StartCsvWorker();
 
-                            if (realDbId != -1)
-                            {
-                                result.ParsedData[0] = realDbId;
-                                SaveToDatabaseScoped(scopedRealtimeService, scopedMachineService, realDbId, result.ParsedData, arduinoCode);
-                            }
-                            else
-                            {
-                                LogToEventHistory($"[WARNING] Unknown Machine Code: {arduinoCode}. Data Ignored.");
+                                Dispatcher.InvokeAsync(() => LogToEventHistory($"ID {dbId} Saved"), DispatcherPriority.Background);
                             }
                         }
                     }
@@ -126,195 +135,157 @@ namespace MonitoringApp.Pages
             }
         }
 
-        private void SaveToDatabaseScoped(RealtimeDataService realtimeService, MachineService machineService, int idKey, object[] data, int arduinoCode)
+        private async Task FlushCsvQueue()
         {
-            try
+            // 1. Beritahu worker untuk berhenti
+            _isCsvWorkerRunning = false;
+            await Task.Delay(500); // Tunggu worker benar-benar idle
+
+            if (_csvBuffer.IsEmpty)
             {
-                if (data.Length < 10) return;
+                // Jika antrean kosong, tetap coba convert file yang ada sekarang
+                await Task.Run(() => _csvService.FinalizeExcel(_activeShiftName, _activeShiftDate));
+                return;
+            }
 
-                // 1. Simpan SQL (Synchronous - di dalam Lock & Scope)
-                realtimeService.SaveToDatabase(
-                    idKey,
-                    (int)data[1], (int)data[2], (float)data[3], (float)data[4],
-                    (int)data[5], (float)data[6], (float)data[7], (int)data[8], (int)data[9]
-                );
-
-                // Log UI
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    LogToEventHistory($"Code {arduinoCode} -> DB ID {idKey} | Saved");
-                });
-
-                // === SOLUSI 2: OBJECT DISPOSED EXCEPTION ===
-                // Ambil data mesin SEKARANG, saat Scope Database masih hidup.
-                // Jangan panggil ini di dalam Task.Run!
-                var metaInfo = machineService.GetMachineInfoCached(idKey);
-
-                // 2. Simpan CSV (Background - Fire & Forget)
-                Task.Run(() =>
+            // 2. Kuras sisa antrean secara manual
+            await Task.Run(() => {
+                while (_csvBuffer.TryDequeue(out var item))
                 {
                     try
                     {
-                        string status = ((int)data[1]) == 1 ? "Active" : "Inactive";
-                        string tsDown = TimeSpan.FromSeconds((float)data[6]).ToString(@"hh\:mm\:ss");
-                        string tsUp = TimeSpan.FromSeconds((float)data[7]).ToString(@"hh\:mm\:ss");
+                        _csvService.LogDataToCsv(item.id, item.meta.Name, item.meta.Line, item.meta.Process,
+                            ((int)item.data[1] == 1 ? "Active" : "Inactive"), (int)item.data[2], (float)item.data[3],
+                            (float)item.data[4], (int)item.data[5], TimeSpan.FromSeconds((float)item.data[6]).ToString(@"hh\:mm\:ss"),
+                            TimeSpan.FromSeconds((float)item.data[7]).ToString(@"hh\:mm\:ss"));
+                    }
+                    catch { }
+                }
 
-                        // Gunakan 'metaInfo' yang sudah diamankan tadi
-                        _csvService.LogDataToCsv(
-                            idKey, metaInfo.Name, metaInfo.Line, metaInfo.Process, status,
-                            (int)data[2], (float)data[3], (float)data[4],
-                            (int)data[5], tsDown, tsUp
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        Application.Current.Dispatcher.Invoke(() => LogToEventHistory($"[CSV ERROR] {ex.Message}"));
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                // Tangkap error detail agar tahu kenapa gagal
-                var innerMsg = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                LogToEventHistory($"[DB ERROR] {innerMsg}");
-            }
+                // 3. Beri jeda sedikit agar Stream closed sempurna
+                Thread.Sleep(1000);
+
+                // 4. Baru panggil konversi
+                _csvService.FinalizeExcel(_activeShiftName, _activeShiftDate);
+            });
         }
 
-        // ... (Sisa kode ke bawah sama persis: LogToRawTerminal, ClockTimer_Tick, InitPorts, dll) ...
-
-        private void LogToRawTerminal(string rawText)
+        private async void StartCsvWorker()
         {
-            string log = $"[{DateTime.Now:HH:mm:ss}] {rawText}";
-            Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                if (listBoxLogs == null) return;
-                listBoxLogs.Items.Insert(0, log);
-                if (listBoxLogs.Items.Count > 29) listBoxLogs.Items.RemoveAt(listBoxLogs.Items.Count - 1);
+            if (_isCsvWorkerRunning) return;
+            _isCsvWorkerRunning = true;
+
+            await Task.Run(async () => {
+                while (_csvBuffer.TryDequeue(out var item))
+                {
+                    try
+                    {
+                        _csvService.LogDataToCsv(item.id, item.meta.Name, item.meta.Line, item.meta.Process,
+                            ((int)item.data[1] == 1 ? "Active" : "Inactive"), (int)item.data[2], (float)item.data[3],
+                            (float)item.data[4], (int)item.data[5], TimeSpan.FromSeconds((float)item.data[6]).ToString(@"hh\:mm\:ss"),
+                            TimeSpan.FromSeconds((float)item.data[7]).ToString(@"hh\:mm\:ss"));
+                    }
+                    catch { }
+                    await Task.Delay(10);
+                }
+                _isCsvWorkerRunning = false;
             });
+        }
+
+        private async void BtnStop_Click(object sender, RoutedEventArgs e)
+        {
+            _serialService.Stop();
+            _subscribed = false;
+
+            txtStatus.Text = "Saving data to Excel...";
+            await FlushCsvQueue(); // Paksa tulis sisa data dan konversi ke Excel
+
+            btnStart.IsEnabled = true;
+            btnStop.IsEnabled = false;
+            txtStatus.Text = "Stopped - Excel Generated";
         }
 
         private void LogToEventHistory(string message)
         {
             string log = $"[{DateTime.Now:HH:mm:ss}] {message}";
-
-            // Perbaikan UI: Gunakan Dispatcher dengan prioritas rendah agar tidak membebani UI utama
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-            {
+            Dispatcher.InvokeAsync(() => {
                 if (listBoxFilteredData == null) return;
-
                 listBoxFilteredData.Items.Insert(0, log);
+                if (listBoxFilteredData.Items.Count > 20) listBoxFilteredData.Items.RemoveAt(20);
+            }, DispatcherPriority.Background);
 
-                // Tetap batasi 50, ini sudah bagus
-                if (listBoxFilteredData.Items.Count > 20)
-                    listBoxFilteredData.Items.RemoveAt(listBoxFilteredData.Items.Count - 1);
-
-            }), System.Windows.Threading.DispatcherPriority.Background);
-
-            // Perbaikan Log File: Jangan pakai Task.Run untuk SETIAP baris. 
-            // Masukkan ke antrean saja.
+            if (_logQueue.Count > 100) _logQueue.TryDequeue(out _);
             _logQueue.Enqueue(log);
-
-            // Jalankan proses tulis file secara berkala jika belum berjalan
-            if (!_isProcessingQueue)
-            {
-                ProcessLogQueue();
-            }
+            if (!_isProcessingQueue) ProcessLogQueue();
         }
+
         private async void ProcessLogQueue()
         {
+            if (_isProcessingQueue) return;
             _isProcessingQueue = true;
             try
             {
-                while (_logQueue.TryDequeue(out string logItem))
+                while (_logQueue.TryDequeue(out var log))
                 {
-                    await File.AppendAllTextAsync(_logFile, logItem + Environment.NewLine);
-                    // Beri jeda sangat kecil agar CPU tidak 100% jika antrean sangat banyak
-                    await Task.Delay(10);
+                    if (log != null) await File.AppendAllTextAsync(_logFile, log + Environment.NewLine);
+                    await Task.Delay(50);
                 }
             }
             catch { }
             finally { _isProcessingQueue = false; }
         }
 
-        private void ClockTimer_Tick(object? sender, EventArgs e)
-        {
-            UpdateShiftDisplay();
-            var info = _csvService.GetCurrentShiftInfo();
-            if (info.shiftName != _lastShiftName || info.shiftDate != _lastShiftDate)
-            {
-                LogToEventHistory($"[SYSTEM] Shift Change: {_lastShiftName} -> {info.shiftName}");
-                string shiftToProcess = _lastShiftName;
-                DateTime dateToProcess = _lastShiftDate;
-                _lastShiftName = info.shiftName;
-                _lastShiftDate = info.shiftDate;
-                Task.Run(() =>
-                {
-                    _csvService.FinalizeExcel(shiftToProcess, dateToProcess);
-                    Application.Current.Dispatcher.Invoke(() => LogToEventHistory($"[REPORT] Excel Generated for {shiftToProcess}"));
-                });
-            }
-        }
+        // --- UI Event Handlers (Mencegah Build Error) ---
 
-        private void BtnStart_Click(object sender, RoutedEventArgs e)
+        private void SerialMonitorControl_Loaded(object sender, RoutedEventArgs e)
         {
-            var port = comboPorts.SelectedItem?.ToString();
-            if (string.IsNullOrEmpty(port)) { MessageBox.Show("Select Port."); return; }
-            int baud = 115200;
-            if (comboBaud.SelectedItem is ComboBoxItem item && int.TryParse(item.Content.ToString(), out int b)) baud = b;
-            try
+            if (_serialService.IsRunning)
             {
-                _serialService.Start(port, baud);
                 EnsureSubscribed();
-                btnStart.IsEnabled = false;
-                btnStop.IsEnabled = true;
-                txtStatus.Text = $"Running ({port})";
-                LogToEventHistory($"[SYSTEM] Serial Started on {port} @ {baud}");
+                btnStart.IsEnabled = false; btnStop.IsEnabled = true;
+                txtStatus.Text = "Running (Resumed)";
             }
-            catch (Exception ex) { MessageBox.Show($"Failed: {ex.Message}"); }
         }
 
-        private void BtnStop_Click(object sender, RoutedEventArgs e)
+        private async void SerialMonitorControl_Unloaded(object sender, RoutedEventArgs e)
         {
-            _serialService.Stop();
-            if (_subscribed) { _serialService.DataReceived -= SerialService_DataReceived; _subscribed = false; }
-            btnStart.IsEnabled = true;
-            btnStop.IsEnabled = false;
-            txtStatus.Text = "Stopped";
-            LogToEventHistory("[SYSTEM] Serial Stopped.");
-            var info = _csvService.GetCurrentShiftInfo();
-            Task.Run(() => _csvService.FinalizeExcel(info.shiftName, info.shiftDate));
+            _clockTimer?.Stop();
+            _subscribed = false;
+            await FlushCsvQueue(); // Penting: Agar data tidak hilang saat pindah menu
         }
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
-            listBoxLogs.Items.Clear();
-            listBoxFilteredData.Items.Clear();
+            listBoxLogs?.Items.Clear();
+            listBoxFilteredData?.Items.Clear();
         }
 
-        private void BtnDbConnect_Click(object sender, RoutedEventArgs e) => MessageBox.Show("Database managed automatically.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-        private void ChkShowLog_Checked(object sender, RoutedEventArgs e) { _showRawData = true; LogToEventHistory("Raw Monitor: ENABLED"); }
-        private void ChkShowLog_Unchecked(object sender, RoutedEventArgs e) { _showRawData = false; LogToEventHistory("Raw Monitor: DISABLED"); }
+        private void ChkShowLog_Checked(object sender, RoutedEventArgs e) => _showRawData = true;
 
-        private void InitPorts()
+        private void ChkShowLog_Unchecked(object sender, RoutedEventArgs e) => _showRawData = false;
+
+        private void BtnStart_Click(object sender, RoutedEventArgs e)
         {
-            try { comboPorts.ItemsSource = SerialPort.GetPortNames().OrderBy(p => p).ToArray(); if (comboPorts.Items.Count > 0) comboPorts.SelectedIndex = 0; } catch { }
+            var port = comboPorts.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(port)) return;
+            _serialService.Start(port, 115200);
+            EnsureSubscribed();
+            btnStart.IsEnabled = false; btnStop.IsEnabled = true;
+            txtStatus.Text = $"Running ({port})";
         }
 
-        private void UpdateShiftDisplay()
-        {
-            var info = _csvService.GetCurrentShiftInfo();
-            if (txtCurrentShift != null) txtCurrentShift.Text = $"{info.shiftName} ({DateTime.Now:HH:mm:ss})";
-        }
-
-        private void UpdateDbStatusUI(bool connected)
-        {
-            txtDbStatus.Text = connected ? "Connected" : "Disconnected";
-            dbStatusIndicator.Fill = connected ? new SolidColorBrush(Color.FromRgb(16, 185, 129)) : new SolidColorBrush(Color.FromRgb(239, 68, 68));
-        }
-
+        // --- Helpers ---
+        private void InitPorts() { try { comboPorts.ItemsSource = SerialPort.GetPortNames().OrderBy(p => p).ToArray(); if (comboPorts.Items.Count > 0) comboPorts.SelectedIndex = 0; } catch { } }
+        private void UpdateShiftDisplay() { var info = _csvService.GetCurrentShiftInfo(); if (txtCurrentShift != null) txtCurrentShift.Text = $"{info.shiftName} ({DateTime.Now:HH:mm:ss})"; }
+        private void UpdateDbStatusUI(bool connected) { if (txtDbStatus == null) return; txtDbStatus.Text = connected ? "Connected" : "Disconnected"; dbStatusIndicator.Fill = connected ? new SolidColorBrush(Color.FromRgb(16, 185, 129)) : new SolidColorBrush(Color.FromRgb(239, 68, 68)); }
         private void EnsureLogDirectory() { if (!Directory.Exists("Logs")) Directory.CreateDirectory("Logs"); }
-        private void EnsureSubscribed() { if (!_subscribed) { _serialService.DataReceived += SerialService_DataReceived; _subscribed = true; } }
-        private void SerialMonitorControl_Loaded(object sender, RoutedEventArgs e) { if (_serialService.IsRunning) { EnsureSubscribed(); btnStart.IsEnabled = false; btnStop.IsEnabled = true; txtStatus.Text = "Running (Resumed)"; } }
-        private void SerialMonitorControl_Unloaded(object sender, RoutedEventArgs e) { if (_subscribed) { _serialService.DataReceived -= SerialService_DataReceived; _subscribed = false; } _clockTimer?.Stop(); }
+        private void LogToRawTerminal(string rawText)
+        {
+            Dispatcher.InvokeAsync(() => {
+                if (listBoxLogs == null) return;
+                listBoxLogs.Items.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {rawText}");
+                if (listBoxLogs.Items.Count > 20) listBoxLogs.Items.RemoveAt(20);
+            }, DispatcherPriority.Background);
+        }
     }
 }

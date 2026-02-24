@@ -11,6 +11,8 @@
         <SolidColorBrush x:Key="ActiveBrush" Color="#2E7D32"/>
         <SolidColorBrush x:Key="InactiveBrush" Color="#C62828"/>
 
+        
+
         <Style x:Key="MachineCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource InactiveBrush}"/>
             <Setter Property="BorderBrush" Value="#B71C1C"/>
@@ -102,7 +104,7 @@
         </Grid.RowDefinitions>
 
         <ContentControl Grid.Row="0" Height="80">
-            <controls:AppHeader />
+            <controls:AppHeader Loaded="AppHeader_Loaded" />
         </ContentControl>
 
         <Grid Grid.Row="1">
@@ -145,6 +147,7 @@
                         <ContextMenu x:Name="HamburgerMenu" StaysOpen="False" Style="{StaticResource ModernContextMenu}">
                             <MenuItem Header="⚙️   Admin Panel" Click="BtnOpenAdmin_Click" Style="{StaticResource ModernMenuItem}"/>
                             <Separator Style="{StaticResource ModernSeparator}"/>
+                            <MenuItem Header="🚀   Force GC Cleanup (Debug)" Click="BtnForceGC_Click" Style="{StaticResource ModernMenuItem}"/>
                             <MenuItem Header="📥   Download Excel Report" Click="BtnDownloadExcel_Click" Style="{StaticResource ModernMenuItem}"/>
 
                             <MenuItem Header="🚪   Logout" Click="BtnLogout_Click">

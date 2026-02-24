@@ -18,9 +18,16 @@ namespace MonitoringApp.Pages
         public Admin()
         {
             InitializeComponent();
-
-            // Load Dashboard pertama kali
             NavigateToDashboard();
+
+            this.Closed += (s, e) => {
+                _dashboardView = null;
+                _serialView = null;
+                _machinesView = null;
+                _usersView = null;
+                this.DataContext = null;
+                this.Content = null;
+            };
         }
 
         // --- Logic Navigasi Utama ---

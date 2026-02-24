@@ -16,6 +16,7 @@ namespace MonitoringApp.Pages
         private readonly AppDbContext _context;
         private readonly SerialPortService _serialService;
         private readonly CsvLogService _csvService;
+        private readonly HardwareMonitorService _hardwareService;
 
         // Hardware Counters
         private PerformanceCounter? _cpuCounter;
@@ -29,19 +30,25 @@ namespace MonitoringApp.Pages
         public DashboardControl(
             AppDbContext context,
             SerialPortService serialService,
+            HardwareMonitorService hardwareService,
             CsvLogService csvService)
         {
             InitializeComponent();
 
             _context = context;
             _serialService = serialService;
+            _hardwareService = hardwareService;
             _csvService = csvService;
 
             // Setup ViewModel
             this.DataContext = new DashboardViewModel();
 
-            // Init Hardware Counters (Bungkus try-catch agar tidak crash di PC yang diproteksi)
-            InitializePerformanceCounters();
+            // Setup Timer (Tingkatkan ke 2 atau 3 detik agar lebih hemat RAM)
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _timer.Tick += UpdateSystemStatus;
+
+            this.Loaded += (s, e) => { _timer.Start(); };
+            this.Unloaded += (s, e) => { _timer.Stop(); }; // Cukup stop timer saja
 
             // Setup Timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -50,21 +57,6 @@ namespace MonitoringApp.Pages
             // Lifetime Management
             this.Loaded += (s, e) => { UpdateSystemStatus(null, null); _timer.Start(); };
             this.Unloaded += OnUnloaded;
-        }
-
-        private void InitializePerformanceCounters()
-        {
-            try
-            {
-                // Note: PerformanceCounter hanya jalan di Windows
-                _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-                _ramCounter = new PerformanceCounter("Memory", "Available MBytes");
-            }
-            catch (Exception ex)
-            {
-                // Jika gagal (misal permission denied), biarkan null agar aplikasi tidak crash
-                System.Diagnostics.Debug.WriteLine($"Counter Error: {ex.Message}");
-            }
         }
 
         private void UpdateSystemStatus(object? sender, EventArgs? e)
@@ -105,12 +97,8 @@ namespace MonitoringApp.Pages
             }
 
             // 5. Hardware Stats (Hanya jika counter berhasil di-init)
-            if (_cpuCounter != null && _ramCounter != null)
-            {
-                // NextValue() pertama kali seringkali return 0, jadi pemanggilan berulang timer akan memperbaikinya
-                vm.CpuUsage = $"{_cpuCounter.NextValue():0}%";
-                vm.RamUsage = $"{_ramCounter.NextValue()} MB Free";
-            }
+            vm.CpuUsage = _hardwareService.GetCpuUsage();
+            vm.RamUsage = _hardwareService.GetRamUsage();
         }
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
