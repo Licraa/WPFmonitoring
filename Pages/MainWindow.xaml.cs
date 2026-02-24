@@ -60,23 +60,7 @@ namespace MonitoringApp.Pages
             }
         }
 
-        private void BtnForceGC_Click(object sender, RoutedEventArgs e)
-        {
-            // 1. Jalankan Collection awal
-            GC.Collect();
-
-            // 2. Tunggu hingga semua objek yang memiliki Finalizer (destructor) selesai diproses
-            GC.WaitForPendingFinalizers();
-
-            // 3. Jalankan Collection lagi untuk membersihkan objek yang baru saja di-finalize
-            GC.Collect();
-
-            // 4. Opsional: Paksa pembersihan memori kembali ke Sistem Operasi (hanya untuk pengujian)
-            GC.Collect(2, GCCollectionMode.Forced, true);
-
-            MessageBox.Show("Manual Garbage Collection Triggered!\nPeriksa grafik Gen 2 di Diagnostic Tools.",
-                            "GC Test", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+     
 
         private async void RefreshTimer_Tick(object? sender, EventArgs e)
         {
