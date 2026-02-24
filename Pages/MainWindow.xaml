@@ -146,7 +146,8 @@
                     <Button.ContextMenu>
                         <ContextMenu x:Name="HamburgerMenu" StaysOpen="False" Style="{StaticResource ModernContextMenu}">
                             <MenuItem Header="⚙️   Admin Panel" Click="BtnOpenAdmin_Click" Style="{StaticResource ModernMenuItem}"/>
-                            <Separator Style="{StaticResource ModernSeparator}"
+                            <Separator Style="{StaticResource ModernSeparator}"/>
+                       
                             <MenuItem Header="📥   Download Excel Report" Click="BtnDownloadExcel_Click" Style="{StaticResource ModernMenuItem}"/>
 
                             <MenuItem Header="🚪   Logout" Click="BtnLogout_Click">
