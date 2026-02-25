@@ -42,7 +42,11 @@ namespace MonitoringApp.Services
                         Inactive = g.Count(x => x.Data == null || x.Data.NilaiA0 != 1),
                         // Hitung total Count dan PartHours untuk dashboard utama jika perlu
                         Count = g.Sum(x => x.Data?.NilaiTerakhirA2 ?? 0),
-                        PartHours = g.Sum(x => x.Data?.PartHours ?? 0)
+                        PartHours = g.Sum(x => x.Data?.PartHours ?? 0),
+                        Cycle = g.Any(x => x.Data != null) ? g.Average(x => x.Data?.DurasiTerakhirA4 ?? 0) : 0,
+                        AvgCycle = g.Any(x => x.Data != null) ? g.Average(x => x.Data?.RataRataTerakhirA4 ?? 0) : 0,
+
+                
                     })
                     .ToList();
             }

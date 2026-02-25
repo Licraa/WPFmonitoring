@@ -19,8 +19,11 @@ namespace MonitoringApp.Pages
         private readonly HardwareMonitorService _hardwareService;
 
         // Hardware Counters
-        private PerformanceCounter? _cpuCounter;
-        private PerformanceCounter? _ramCounter;
+        private readonly PerformanceCounter _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+        private readonly PerformanceCounter _ramCounter = new PerformanceCounter("Memory", "Available MBytes");
+
+        
+        private List<object> _allDataCache = new();
 
         // Timer
         private DispatcherTimer _timer;

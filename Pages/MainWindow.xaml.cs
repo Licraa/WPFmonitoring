@@ -91,7 +91,6 @@ namespace MonitoringApp.Pages
         // --- REVISI: UPDATE DASHBOARD DENGAN SCOPE BARU ---
         private async Task UpdateDashboardDataAsync()
         {
-           
             using (var scope = _scopeFactory.CreateScope())
             {
                 var scopedSummaryService = scope.ServiceProvider.GetRequiredService<SummaryService>();
@@ -102,15 +101,17 @@ namespace MonitoringApp.Pages
                     var existingItem = _dashboardCollection.FirstOrDefault(x => x.lineProduction == newItem.lineProduction);
                     if (existingItem != null)
                     {
+                        // Update Properti Dasar
                         existingItem.Active = newItem.Active;
                         existingItem.Inactive = newItem.Inactive;
                         existingItem.TotalMachine = newItem.TotalMachine;
                         existingItem.Count = newItem.Count;
                         existingItem.PartHours = newItem.PartHours;
+
+                        // FIX: Update Properti Cycle & Persentase
                         existingItem.Cycle = newItem.Cycle;
                         existingItem.AvgCycle = newItem.AvgCycle;
-                        existingItem.DowntimePercent = newItem.DowntimePercent;
-                        existingItem.UptimePercent = newItem.UptimePercent;
+              
                     }
                     else
                     {
@@ -118,23 +119,23 @@ namespace MonitoringApp.Pages
                     }
                 }
 
+                // Hapus data yang sudah tidak ada di DB
                 var itemsToRemove = _dashboardCollection
                     .Where(x => !newDataList.Any(n => n.lineProduction == x.lineProduction))
                     .ToList();
                 foreach (var item in itemsToRemove) _dashboardCollection.Remove(item);
 
-                int totalMachine = 0, totalActive = 0, totalInactive = 0;
-                foreach (var s in _dashboardCollection)
+                // Update DataContext untuk Header
+                DashboardPanel.DataContext = new
                 {
-                    totalMachine += s.TotalMachine;
-                    totalActive += s.Active;
-                    totalInactive += s.Inactive;
-                }
-                DashboardPanel.DataContext = new { TotalMachine = totalMachine, Active = totalActive, Inactive = totalInactive };
+                    TotalMachine = _dashboardCollection.Sum(s => s.TotalMachine),
+                    Active = _dashboardCollection.Sum(s => s.Active),
+                    Inactive = _dashboardCollection.Sum(s => s.Inactive)
+                };
             }
         }
 
-        
+
         private async Task UpdateDetailDataAsync()
         {
             if (_selectedLine == null) return;
@@ -269,14 +270,18 @@ namespace MonitoringApp.Pages
 
             if (result == MessageBoxResult.Yes)
             {
-                // 1. Ambil LoginWindow baru dari DI Container
+                _refreshTimer.Stop(); // WAJIB: Hentikan timer agar tidak leak
+
+                // Membersihkan koleksi di RAM
+                _dashboardCollection.Clear();
+                _detailCollection.Clear();
+
                 var loginWindow = App.ServiceProvider.GetRequiredService<LoginWindow>();
-
-                // 2. Tampilkan LoginWindow
                 loginWindow.Show();
-
-                // 3. Tutup MainWindow saat ini
                 this.Close();
+
+                // Paksa GC turun setelah logout
+                GC.Collect();
             }
         }
 

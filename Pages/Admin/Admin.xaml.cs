@@ -12,12 +12,12 @@ namespace MonitoringApp.Pages
         public Admin()
         {
             InitializeComponent();
-
+            
             // Set halaman awal saat pertama kali dibuka
             NavigateToDashboard();
 
             // Memastikan pembersihan total saat jendela Admin ditutup
-            this.Closed += (s, e) =>
+            this.Closed += (s, e) => 
             {
                 CleanupMemory();
                 this.DataContext = null;

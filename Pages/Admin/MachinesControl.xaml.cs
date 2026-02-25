@@ -14,7 +14,8 @@ namespace MonitoringApp.Pages
         private readonly MachineService _service;
 
         // Cache data
-        private List<MachineDetailViewModel> _allDataCache;
+        private List<MachineDetailViewModel> _allDataCache = new();
+
 
         public MachinesControl()
         {

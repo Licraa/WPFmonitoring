@@ -246,8 +246,7 @@
                                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="PART/HR" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
                                                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PartHours, StringFormat={}{0:F1}}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
 
-                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="CYCLE" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
-                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Cycle, StringFormat={}{0:N2}}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
+                                                    
                                                 </Grid>
 
                                                 <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -261,14 +260,13 @@
                                                         <RowDefinition Height="Auto"/>
                                                     </Grid.RowDefinitions>
 
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="CYCLE" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
+                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Cycle, StringFormat={}{0:N2}}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
+
                                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="AVG CYCLE" Foreground="#777" FontSize="11"/>
                                                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AvgCycle, StringFormat={}{0:N2}}" FontWeight="Bold" Foreground="#333" Margin="10,0,0,0"/>
 
-                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="DOWNTIME" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
-                                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DowntimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
-
-                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="UPTIME" Foreground="#777" FontSize="11" Margin="0,5,0,0"/>
-                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding UptimePercent, StringFormat={}{0:F1}%}" FontWeight="Bold" Foreground="#333" Margin="10,5,0,0"/>
+                                                    
                                                 </Grid>
                                             </Grid>
                                         </Border>
