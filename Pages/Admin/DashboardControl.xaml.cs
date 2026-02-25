@@ -25,8 +25,6 @@ namespace MonitoringApp.Pages
         // Timer
         private DispatcherTimer _timer;
 
-        // CONSTRUCTOR INJECTION (Profesional Standard)
-        // Kita meminta Service langsung di parameter, bukan mengambil sendiri
         public DashboardControl(
             AppDbContext context,
             SerialPortService serialService,
@@ -48,7 +46,12 @@ namespace MonitoringApp.Pages
             _timer.Tick += UpdateSystemStatus;
 
             this.Loaded += (s, e) => { _timer.Start(); };
-            this.Unloaded += (s, e) => { _timer.Stop(); }; // Cukup stop timer saja
+            this.Unloaded += (s, e) => {
+                _timer.Stop();
+                _cpuCounter?.Dispose();
+                _ramCounter?.Dispose();
+                this.DataContext = null; // Bantu GC melepas ViewModel
+            }; 
 
             // Setup Timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };

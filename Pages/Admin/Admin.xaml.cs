@@ -2,29 +2,24 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using Microsoft.Extensions.DependencyInjection; // Wajib untuk ServiceProvider
-using MonitoringApp.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using MonitoringApp.Services;
 
 namespace MonitoringApp.Pages
 {
     public partial class Admin : Window
     {
-        // Cache untuk halaman agar state tidak hilang saat pindah tab
-        private DashboardControl? _dashboardView;
-        private SerialMonitorControl? _serialView;
-        private MachinesControl? _machinesView;
-        private UserManagementControl? _usersView;
-
         public Admin()
         {
             InitializeComponent();
+
+            // Set halaman awal saat pertama kali dibuka
             NavigateToDashboard();
 
-            this.Closed += (s, e) => {
-                _dashboardView = null;
-                _serialView = null;
-                _machinesView = null;
-                _usersView = null;
+            // Memastikan pembersihan total saat jendela Admin ditutup
+            this.Closed += (s, e) =>
+            {
+                CleanupMemory();
                 this.DataContext = null;
                 this.Content = null;
             };
@@ -34,50 +29,68 @@ namespace MonitoringApp.Pages
 
         private void NavigateToDashboard()
         {
-            if (_dashboardView == null)
-            {
-
-                _dashboardView = App.ServiceProvider.GetRequiredService<DashboardControl>();
-
-            }
-
-            MainContentArea.Content = _dashboardView;
+            PrepareNavigation();
+            // Selalu ambil instance baru dari ServiceProvider
+            MainContentArea.Content = App.ServiceProvider.GetRequiredService<DashboardControl>();
             SetActiveButton(btnNavDashboard);
         }
 
         private void NavigateToSerial()
         {
-            if (_serialView == null)
-            {
-
-                _serialView = App.ServiceProvider.GetRequiredService<SerialMonitorControl>();
-            }
-
-            MainContentArea.Content = _serialView;
+            PrepareNavigation();
+            MainContentArea.Content = App.ServiceProvider.GetRequiredService<SerialMonitorControl>();
             SetActiveButton(btnNavSerial);
         }
 
         private void NavigateToMachines()
         {
-            if (_machinesView == null)
-            {
-
-                _machinesView = new MachinesControl();
-            }
-
-            MainContentArea.Content = _machinesView;
+            PrepareNavigation();
+            // Pastikan MachinesControl sudah terdaftar di App.xaml.cs sebagai Transient
+            MainContentArea.Content = App.ServiceProvider.GetRequiredService<MachinesControl>();
             SetActiveButton(btnNavMachines);
         }
 
         private void NavigateToUsers()
         {
-            if (_usersView == null)
-            {
-                _usersView = new UserManagementControl();
-            }
-            MainContentArea.Content = _usersView;
+            PrepareNavigation();
+            MainContentArea.Content = App.ServiceProvider.GetRequiredService<UserManagementControl>();
             SetActiveButton(btnNavUsers);
         }
+
+        // --- Core Memory Management Logic ---
+
+        /// <summary>
+        /// Membersihkan halaman lama dan memaksa Garbage Collector untuk mengosongkan RAM
+        /// </summary>
+        private void PrepareNavigation()
+        {
+            // 1. Lepas konten lama dari UI Tree agar bisa dideteksi GC sebagai 'unused'
+            MainContentArea.Content = null;
+
+            // 2. Jalankan pembersihan memori manual (Sangat penting untuk menurunkan Gen 2)
+            CleanupMemory();
+        }
+
+        private void CleanupMemory()
+        {
+            try
+            {
+                // Paksa pembersihan semua generasi (0, 1, dan 2)
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Cleanup Memory Error: {ex.Message}");
+            }
+        }
+
+        // --- Event Handlers Sidebar ---
+
+        private void BtnNavDashboard_Click(object sender, RoutedEventArgs e) => NavigateToDashboard();
+        private void BtnNavSerial_Click(object sender, RoutedEventArgs e) => NavigateToSerial();
+        private void BtnNavMachines_Click(object sender, RoutedEventArgs e) => NavigateToMachines();
         private void BtnNavUsers_Click(object sender, RoutedEventArgs e) => NavigateToUsers();
 
         private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
@@ -86,24 +99,16 @@ namespace MonitoringApp.Pages
             SetActiveButton(btnNavSettings);
         }
 
-        // --- Event Handlers Sidebar ---
-
-        private void BtnNavDashboard_Click(object sender, RoutedEventArgs e) => NavigateToDashboard();
-        private void BtnNavSerial_Click(object sender, RoutedEventArgs e) => NavigateToSerial();
-        private void BtnNavMachines_Click(object sender, RoutedEventArgs e) => NavigateToMachines();
-
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show("Are you sure you want to logout?", "Logout", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result == MessageBoxResult.Yes)
             {
-
-
                 this.Close();
             }
         }
 
-        // --- Helper: Visual Sidebar Effect ---
+        // --- Visual Sidebar Helpers ---
 
         private void SetActiveButton(Button activeButton)
         {
@@ -119,6 +124,7 @@ namespace MonitoringApp.Pages
 
         private void ResetButtonStyle(Button btn)
         {
+            if (btn == null) return;
             btn.Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)); // #9CA3AF
             btn.Background = Brushes.Transparent;
         }

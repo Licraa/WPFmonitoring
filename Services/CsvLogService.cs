@@ -31,9 +31,9 @@ namespace MonitoringApp.Services
             DateTime shiftDate = now.Date;
             string shift = "shift_3";
 
-            TimeSpan startShift1 = new TimeSpan(6, 30, 0);
-            TimeSpan startShift2 = new TimeSpan(14, 30, 0);
-            TimeSpan startShift3 = new TimeSpan(22, 30, 0);
+            TimeSpan startShift1 = new TimeSpan(6, 29, 0);
+            TimeSpan startShift2 = new TimeSpan(14, 29, 0);
+            TimeSpan startShift3 = new TimeSpan(22, 29, 0);
 
             if (time >= startShift1 && time < startShift2) shift = "shift_1";
             else if (time >= startShift2 && time < startShift3) shift = "shift_2";

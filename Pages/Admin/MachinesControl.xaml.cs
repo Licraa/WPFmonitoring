@@ -23,8 +23,11 @@ namespace MonitoringApp.Pages
 
             _service = App.ServiceProvider.GetRequiredService<MachineService>();
 
-            _allDataCache = new List<MachineDetailViewModel>();
-
+            this.Unloaded += (s, e) => {
+                _allDataCache?.Clear(); // Kosongkan list cache saat pindah halaman
+                ListLines.ItemsSource = null;
+                ListMachines.ItemsSource = null;
+            };
             LoadData();
         }
 

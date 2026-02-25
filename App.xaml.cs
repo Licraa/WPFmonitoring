@@ -27,53 +27,61 @@ namespace MonitoringApp
 
             base.OnStartup(e);
 
-            var services = new ServiceCollection();
-
-            // --- 2. BACA KONFIGURASI appsettings.json (Hanya Sekali) ---
-            var configBuilder = new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-            var configuration = configBuilder.Build();
-            string connectionString = configuration.GetConnectionString("DefaultConnection");
-
-            // --- 3. DAFTARKAN SERVICES ---
-            // SOLUSI MEMORY LEAK: Gunakan AddDbContextFactory
-            services.AddDbContextFactory<AppDbContext>(options => {
-                options.UseSqlServer(connectionString, sqlOptions => {
-                    sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorNumbersToAdd: null);
-                });
-            });
-
-            // Services bersifat Singleton
-            services.AddSingleton<SerialPortService>();
-            services.AddSingleton<HardwareMonitorService>();
-
-            // Services bersifat Transient
-            services.AddTransient<MachineService>();
-            services.AddTransient<SummaryService>();
-            services.AddTransient<RealtimeDataService>();
-            services.AddTransient<SecurityHelper>();
-            services.AddTransient<UserService>();
-            services.AddTransient<AuthService>();
-            services.AddTransient<CsvLogService>();
-            services.AddTransient<DataProcessingService>();
-            services.AddTransient<DashboardControl>();
-
-            // --- 4. DAFTARKAN UI ---
-            services.AddTransient<LoginWindow>();
-            services.AddTransient<MainWindow>();
-            services.AddTransient<AdminWindow>();
-            services.AddTransient<SerialMonitorControl>();
-
-            // Build Provider
-            ServiceProvider = services.BuildServiceProvider();
-
-            // --- 5. JALANKAN APLIKASI ---
             try
             {
+                // --- 2. BACA KONFIGURASI appsettings.json ---
+                var configBuilder = new ConfigurationBuilder()
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                var configuration = configBuilder.Build();
+                string connectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
+
+                // --- 3. DAFTARKAN SERVICES ---
+                var services = new ServiceCollection();
+
+                // SOLUSI MEMORY LEAK: Gunakan AddDbContextFactory
+                services.AddDbContextFactory<AppDbContext>(options => {
+                    options.UseSqlServer(connectionString, sqlOptions => {
+                        sqlOptions.EnableRetryOnFailure(
+                            maxRetryCount: 5,
+                            maxRetryDelay: TimeSpan.FromSeconds(10),
+                            errorNumbersToAdd: null);
+                    });
+                });
+
+                // Services bersifat Singleton (Data tetap hidup di background)
+                services.AddSingleton<SerialPortService>();
+                services.AddSingleton<HardwareMonitorService>();
+                services.AddSingleton<DataLoggingService>(); // Harus Singleton
+
+                // Services bersifat Transient
+                services.AddTransient<MachineService>();
+                services.AddTransient<SummaryService>();
+                services.AddTransient<RealtimeDataService>();
+                services.AddTransient<SecurityHelper>();
+                services.AddTransient<UserService>();
+                services.AddTransient<AuthService>();
+                services.AddTransient<CsvLogService>();
+                services.AddTransient<DataProcessingService>();
+                services.AddTransient<DashboardControl>();
+
+                // --- 4. DAFTARKAN UI ---
+                services.AddTransient<LoginWindow>();
+                services.AddTransient<MainWindow>();
+                services.AddTransient<AdminWindow>();
+                services.AddTransient<DashboardControl>();
+                services.AddTransient<SerialMonitorControl>();
+                services.AddTransient<MachinesControl>();
+                services.AddTransient<UserManagementControl>();
+
+                // --- 5. BUILD PROVIDER (SEBELUM DIGUNAKAN) ---
+                ServiceProvider = services.BuildServiceProvider();
+
+                // --- 6. AKTIFKAN BACKGROUND SERVICE ---
+                // Panggil service ini agar constructor berjalan dan mulai subscribe data secara global
+                ServiceProvider.GetRequiredService<DataLoggingService>();
+
+                // --- 7. JALANKAN UI PERTAMA ---
                 var loginWindow = ServiceProvider.GetRequiredService<LoginWindow>();
                 loginWindow.Show();
             }
