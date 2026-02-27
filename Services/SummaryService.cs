@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Data;
 using MonitoringApp.Models;
@@ -26,7 +23,8 @@ namespace MonitoringApp.Services
                 // Ambil data mentah dengan AsNoTracking untuk kecepatan dan akurasi data
                 var rawData = context.Lines
                     .AsNoTracking()
-                    .Select(l => new {
+                    .Select(l => new
+                    {
                         l.LineProduction,
                         Data = context.DataRealtimes.AsNoTracking().FirstOrDefault(dr => dr.Id == l.Id)
                     })
@@ -46,7 +44,7 @@ namespace MonitoringApp.Services
                         Cycle = g.Any(x => x.Data != null) ? g.Average(x => x.Data?.DurasiTerakhirA4 ?? 0) : 0,
                         AvgCycle = g.Any(x => x.Data != null) ? g.Average(x => x.Data?.RataRataTerakhirA4 ?? 0) : 0,
 
-                
+
                     })
                     .ToList();
             }
