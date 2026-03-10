@@ -131,37 +131,27 @@ namespace MonitoringApp.Services
         // --- 4. DELETE ---
         public bool DeleteMachine(int id)
         {
+            // 1. Bersihkan cache
             if (_machineCache.ContainsKey(id)) _machineCache.Remove(id);
 
-            using var transaction = _context.Database.BeginTransaction();
             try
             {
-                var realtimeData = _context.DataRealtimes.FirstOrDefault(x => x.Id == id);
-                if (realtimeData != null) _context.DataRealtimes.Remove(realtimeData);
-
-                var shift1 = _context.Shift1s.FirstOrDefault(x => x.Id == id);
-                if (shift1 != null) _context.Shift1s.Remove(shift1);
-
-                var shift2 = _context.Shift2s.FirstOrDefault(x => x.Id == id);
-                if (shift2 != null) _context.Shift2s.Remove(shift2);
-
-                var shift3 = _context.Shift3s.FirstOrDefault(x => x.Id == id);
-                if (shift3 != null) _context.Shift3s.Remove(shift3);
-
+                // 2. Ambil data mesin
                 var line = _context.Lines.FirstOrDefault(x => x.Id == id);
                 if (line != null)
                 {
+                    // 3. Langsung hapus (Cascade Delete di DB akan menghapus Shift1,2,3 dan Realtime otomatis)
                     _context.Lines.Remove(line);
                     _context.SaveChanges();
-                    transaction.Commit();
                     return true;
                 }
                 return false;
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
-                System.Diagnostics.Debug.WriteLine($"Delete Error: {ex.Message}");
+                // Ambil pesan error paling dalam
+                var msg = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                System.Windows.MessageBox.Show($"Gagal hapus: {msg}");
                 return false;
             }
         }

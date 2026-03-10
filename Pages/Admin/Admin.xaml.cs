@@ -59,11 +59,19 @@ namespace MonitoringApp.Pages
 
         private void NavigateToSettings()
         {
-            PrepareNavigation(); // Memanggil fungsi cleanup memori yang sudah ada
-                                 // Memanggil instance SettingsControl dari ServiceProvider
-            MainContentArea.Content = App.ServiceProvider.GetRequiredService<SettingsControl>();
-            SetActiveButton(btnNavSettings);
+            MessageBox.Show("Settings menu is under development. Coming soon!",
+                            "Information",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
         }
+
+        //private void NavigateToSettings()
+        //{
+        //    PrepareNavigation(); // Memanggil fungsi cleanup memori yang sudah ada
+        //                         // Memanggil instance SettingsControl dari ServiceProvider
+        //    MainContentArea.Content = App.ServiceProvider.GetRequiredService<SettingsControl>();
+        //    SetActiveButton(btnNavSettings);
+        //}
 
 
 

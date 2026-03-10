@@ -77,6 +77,35 @@ namespace MonitoringApp.Data
             ConfigureShiftTable<Shift1>(modelBuilder, "shift_1");
             ConfigureShiftTable<Shift2>(modelBuilder, "shift_2");
             ConfigureShiftTable<Shift3>(modelBuilder, "shift_3");
+
+            // --- TAMBAHKAN RELASI FOREIGN KEY DISINI ---
+            // A. Relasi Line ke DataRealtime
+            modelBuilder.Entity<DataRealtime>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<DataRealtime>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade); // Otomatis hapus jika Line dihapus
+
+            // B. Relasi Line ke Shift1
+            modelBuilder.Entity<Shift1>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<Shift1>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // C. Relasi Line ke Shift2
+            modelBuilder.Entity<Shift2>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<Shift2>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // D. Relasi Line ke Shift3
+            modelBuilder.Entity<Shift3>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<Shift3>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         // --- HELPER CANGGIH ---

@@ -258,9 +258,27 @@ namespace MonitoringApp.Pages
 
         private void BtnDownloadExcel_Click(object sender, RoutedEventArgs e)
         {
-            var history = new ReportHistoryWindow();
-            history.Owner = this;
-            history.Show();
+            // 1. Cari apakah jendela ReportHistoryWindow sudah terbuka
+            var existingWindow = Application.Current.Windows
+                .OfType<ReportHistoryWindow>()
+                .FirstOrDefault();
+
+            if (existingWindow != null)
+            {
+                // 2. Jika sudah ada, bawa ke depan (Focus)
+                if (existingWindow.WindowState == WindowState.Minimized)
+                {
+                    existingWindow.WindowState = WindowState.Normal;
+                }
+                existingWindow.Activate();
+            }
+            else
+            {
+                // 3. Jika belum ada, baru buat instance baru
+                var history = new ReportHistoryWindow();
+                history.Owner = this; // Menjaga agar tetap di atas MainWindow
+                history.Show();
+            }
         }
 
         private void BtnLogout_Click(object sender, RoutedEventArgs e)
