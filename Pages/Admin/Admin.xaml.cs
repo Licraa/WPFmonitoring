@@ -57,6 +57,16 @@ namespace MonitoringApp.Pages
             SetActiveButton(btnNavUsers);
         }
 
+        private void NavigateToSettings()
+        {
+            PrepareNavigation(); // Memanggil fungsi cleanup memori yang sudah ada
+                                 // Memanggil instance SettingsControl dari ServiceProvider
+            MainContentArea.Content = App.ServiceProvider.GetRequiredService<SettingsControl>();
+            SetActiveButton(btnNavSettings);
+        }
+
+
+
         // --- Core Memory Management Logic ---
 
         /// <summary>
@@ -92,13 +102,10 @@ namespace MonitoringApp.Pages
         private void BtnNavSerial_Click(object sender, RoutedEventArgs e) => NavigateToSerial();
         private void BtnNavMachines_Click(object sender, RoutedEventArgs e) => NavigateToMachines();
         private void BtnNavUsers_Click(object sender, RoutedEventArgs e) => NavigateToUsers();
+        private void BtnNavSettings_Click(object sender, RoutedEventArgs e) => NavigateToSettings();
+        
 
-        private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Settings feature coming soon!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-            SetActiveButton(btnNavSettings);
-        }
-
+ 
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show("Are you sure you want to logout?", "Logout", MessageBoxButton.YesNo, MessageBoxImage.Question);

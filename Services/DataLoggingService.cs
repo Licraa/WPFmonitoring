@@ -16,7 +16,7 @@ namespace MonitoringApp.Services
         private readonly IServiceScopeFactory _scopeFactory;
 
         // Antrean data yang tetap hidup meskipun UI ditutup
-        private readonly ConcurrentQueue<(int id, object[] data, (string Name, string Line, string Process) meta)> _csvBuffer = new();
+        private readonly ConcurrentQueue<(int id, object[] data, (int MachineCode, string Name, string Line, string Process) meta)> _csvBuffer = new();
         private bool _isCsvWorkerRunning = false;
 
         private string _activeShiftName;
@@ -96,8 +96,8 @@ namespace MonitoringApp.Services
                                 (float)result.ParsedData[6], (float)result.ParsedData[7], (int)result.ParsedData[8], (int)result.ParsedData[9]);
 
                             // 2. Masukkan ke antrean CSV
-                            var meta = machineService.GetMachineInfoCached(dbId);
-                            _csvBuffer.Enqueue((dbId, result.ParsedData, meta));
+                            var info = machineService.GetMachineInfoCached(dbId);
+                            _csvBuffer.Enqueue((result.IdKey, result.ParsedData, (info.MachineCode, info.Name, info.Line, info.Process)));
 
                             if (!_isCsvWorkerRunning) StartCsvWorker();
                         }
@@ -148,7 +148,7 @@ namespace MonitoringApp.Services
             {
                 try
                 {
-                    _csvService.LogDataToCsv(item.id, item.meta.Name, item.meta.Line, item.meta.Process,
+                    _csvService.LogDataToCsv(item.meta.MachineCode, item.meta.Name, item.meta.Line, item.meta.Process,
                         ((int)item.data[1] == 1 ? "Active" : "Inactive"), (int)item.data[2], (float)item.data[3],
                         (float)item.data[4], (int)item.data[5],
                         TimeSpan.FromSeconds((float)item.data[6]).ToString(@"hh\:mm\:ss"),

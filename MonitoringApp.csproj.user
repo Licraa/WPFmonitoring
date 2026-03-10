@@ -13,5 +13,8 @@
     <Compile Update="Pages\Admin\MachinesControl.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Pages\Admin\SettingsControl.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
 </Project>

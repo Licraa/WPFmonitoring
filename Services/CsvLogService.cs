@@ -11,9 +11,18 @@ namespace MonitoringApp.Services
     {
         private readonly string _baseFolder = "data_log_monitoring";
 
+        private readonly SettingService _settingService;
+
+        public CsvLogService(SettingService settingService)
+        {
+            _settingService = settingService;
+        }
+
         // Mendapatkan path CSV berdasarkan shift dan tanggal
         public string GetCsvPath(DateTime date, string shiftName)
         {
+            // Perbaikan: Gunakan path dari setting jika ada (opsional), 
+            // sementara tetap menggunakan default folder jika tidak
             string tanggalFolder = date.ToString("yyyy-MM-dd");
             string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _baseFolder, tanggalFolder);
 
@@ -27,22 +36,25 @@ namespace MonitoringApp.Services
         public (string shiftName, DateTime shiftDate) GetCurrentShiftInfo()
         {
             DateTime now = DateTime.Now;
-            TimeSpan time = now.TimeOfDay;
-            DateTime shiftDate = now.Date;
-            string shift = "shift_3";
+            TimeSpan currentTime = now.TimeOfDay;
 
-            TimeSpan startShift1 = new TimeSpan(6, 29, 0);
-            TimeSpan startShift2 = new TimeSpan(14, 29, 0);
-            TimeSpan startShift3 = new TimeSpan(22, 29, 0);
+            // Sekarang _settingService sudah bisa dikenali karena sudah di-inject melalui constructor
+            var settings = _settingService.GetSettings().ShiftSettings
+                            .OrderBy(s => TimeSpan.Parse(s.StartTime)).ToList();
 
-            if (time >= startShift1 && time < startShift2) shift = "shift_1";
-            else if (time >= startShift2 && time < startShift3) shift = "shift_2";
-            else
+            if (settings.Count == 0) return ("Shift 1", now.Date);
+
+            TimeSpan firstShiftStart = TimeSpan.Parse(settings.First().StartTime);
+
+            // LOGIKA CROSS-DAY:
+            if (currentTime < firstShiftStart)
             {
-                shift = "shift_3";
-                if (time < startShift1) shiftDate = now.Date.AddDays(-1);
+                return (settings.Last().Name, now.AddDays(-1).Date);
             }
-            return (shift, shiftDate);
+
+            var currentShift = settings.LastOrDefault(s => currentTime >= TimeSpan.Parse(s.StartTime));
+
+            return (currentShift?.Name ?? settings.First().Name, now.Date);
         }
 
         // 1. Simpan ke CSV (Dipanggil setiap detik)

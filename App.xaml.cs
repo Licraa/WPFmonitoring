@@ -52,7 +52,8 @@ namespace MonitoringApp
                 // Services bersifat Singleton (Data tetap hidup di background)
                 services.AddSingleton<SerialPortService>();
                 services.AddSingleton<HardwareMonitorService>();
-                services.AddSingleton<DataLoggingService>(); // Harus Singleton
+                services.AddSingleton<DataLoggingService>(); 
+                services.AddSingleton<SettingService>();
 
                 // Services bersifat Transient
                 services.AddTransient<MachineService>();
@@ -73,6 +74,7 @@ namespace MonitoringApp
                 services.AddTransient<SerialMonitorControl>();
                 services.AddTransient<MachinesControl>();
                 services.AddTransient<UserManagementControl>();
+                services.AddTransient<SettingsControl>();
 
                 // --- 5. BUILD PROVIDER (SEBELUM DIGUNAKAN) ---
                 ServiceProvider = services.BuildServiceProvider();
@@ -120,5 +122,6 @@ namespace MonitoringApp
             }
             catch { }
         }
+
     }
 }
