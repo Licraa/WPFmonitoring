@@ -61,6 +61,9 @@ namespace MonitoringApp.Services
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
+                    //Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
+                    Debug.WriteLine($">>> Inner: {ex.InnerException?.Message}");
+                    Debug.WriteLine($">>> Inner2: {ex.InnerException?.InnerException?.Message}");
                 }
             } // Koneksi dan memori langsung dibersihkan di sini
         }

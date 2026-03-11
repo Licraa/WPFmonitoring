@@ -57,15 +57,19 @@ namespace MonitoringApp
                 services.AddSingleton<DataLoggingService>();
                 services.AddSingleton<SettingService>();
 
+                services.AddSingleton<RealtimeDataService>();
+                services.AddSingleton<CsvLogService>();
+                services.AddSingleton<DataProcessingService>();
+
                 // Transient Services (Dibuat baru setiap kali dipanggil)
                 services.AddTransient<MachineService>();
                 services.AddTransient<SummaryService>();
-                services.AddTransient<RealtimeDataService>();
+                //services.AddTransient<RealtimeDataService>();
                 services.AddTransient<SecurityHelper>();
                 services.AddTransient<UserService>();
                 services.AddTransient<AuthService>();
-                services.AddTransient<CsvLogService>();
-                services.AddTransient<DataProcessingService>();
+                //services.AddTransient<CsvLogService>();
+                //services.AddTransient<DataProcessingService>();
 
                 // UI Windows & Controls
                 services.AddTransient<LoginWindow>();

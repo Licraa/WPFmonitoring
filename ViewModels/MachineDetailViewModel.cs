@@ -5,17 +5,13 @@ using System.Threading.Tasks; // [Wajib ada untuk Task.Delay]
 
 namespace MonitoringApp.ViewModels
 {
-    // Pastikan ViewModelBase sudah mengimplementasikan INotifyPropertyChanged
     public class MachineDetailViewModel : ViewModelBase
     {
-        // Data Statis (Jarang berubah) - Pakai auto-property tidak apa-apa
         public int Id { get; set; }
         public int MachineCode { get; set; }
         public string Line { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Process { get; set; } = string.Empty;
-
-        // Data Dinamis (Sering berubah) - Pakai Backing Field + OnPropertyChanged
         private string _remark = string.Empty;
         public string Remark
         {
@@ -51,7 +47,7 @@ namespace MonitoringApp.ViewModels
             set { if (_avgCycle != value) { _avgCycle = value; OnPropertyChanged(); } }
         }
 
-        // --- SPECIAL CASE: NilaiA0 mempengaruhi Status ---
+ 
         private int _nilaiA0;
         public int NilaiA0
         {
@@ -61,8 +57,8 @@ namespace MonitoringApp.ViewModels
                 if (_nilaiA0 != value)
                 {
                     _nilaiA0 = value;
-                    OnPropertyChanged();           // Update nilai integer
-                    OnPropertyChanged(nameof(Status)); // Update string "Active"/"Inactive"
+                    OnPropertyChanged();          
+                    OnPropertyChanged(nameof(Status)); 
                 }
             }
         }
@@ -98,8 +94,6 @@ namespace MonitoringApp.ViewModels
             get => _isJustUpdated;
             set
             {
-                // Kita tidak perlu cek if (_isJustUpdated != value) disini
-                // Agar animasi bisa dipicu berulang kali meskipun nilainya diset true lagi
                 _isJustUpdated = value;
                 OnPropertyChanged();
             }
@@ -116,21 +110,14 @@ namespace MonitoringApp.ViewModels
         {
             if (newData == null) return false;
 
-            // --- LOGIKA ALA JAVASCRIPT ---
-            // Karena di SummaryService kita sudah pakai format ".fff" (milidetik),
-            // String LastUpdate akan SELALU BEDA setiap kali ada data baru dari Arduino.
-
             string timeOld = this.LastUpdate ?? "";
             string timeNew = newData.LastUpdate ?? "";
 
-            // Cukup bandingkan stringnya saja. 
-            // "10:00:05.100" != "10:00:05.600" -> Pasti TRUE -> Pasti BLINK.
             if (timeOld != timeNew)
             {
                 return true;
             }
 
-            // Opsional: Cek status jika jam kebetulan sama (sangat jarang terjadi sekarang)
             if (this.NilaiA0 != newData.NilaiA0) return true;
 
             return false;

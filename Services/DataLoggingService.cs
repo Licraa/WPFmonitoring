@@ -88,6 +88,7 @@ namespace MonitoringApp.Services
                         var realtimeService = scope.ServiceProvider.GetRequiredService<RealtimeDataService>();
 
                         int dbId = machineService.GetDbIdByArduinoCode(result.IdKey);
+                        System.Diagnostics.Debug.WriteLine($"[DEBUG] ArduinoCode={result.IdKey} → dbId={dbId}");
                         if (dbId != -1)
                         {
                             // 1. Simpan ke Database (SQL Server)
