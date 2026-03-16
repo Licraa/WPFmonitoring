@@ -148,7 +148,7 @@ namespace MonitoringApp.Pages
 
                 foreach (var newItem in newDataList)
                 {
-                    var existingItem = _detailCollection.FirstOrDefault(x => x.Name == newItem.Name);
+                    var existingItem = _detailCollection.FirstOrDefault(x => x.Id == newItem.Id);
 
                     if (existingItem != null)
                     {
@@ -176,7 +176,7 @@ namespace MonitoringApp.Pages
                     }
                 }
 
-                var itemsToRemove = _detailCollection.Where(x => !newDataList.Any(n => n.Name == x.Name)).ToList();
+                var itemsToRemove = _detailCollection.Where(x => !newDataList.Any(n => n.Id == x.Id)).ToList();
                 foreach (var item in itemsToRemove) _detailCollection.Remove(item);
 
                 int active = 0, inactive = 0;

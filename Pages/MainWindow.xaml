@@ -317,8 +317,7 @@
                     </Grid>
                 </Border>
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="20">
-                    <WrapPanel HorizontalAlignment="Center">
-                        <ItemsControl x:Name="mesinListView">
+                    <ItemsControl x:Name="mesinListView">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel HorizontalAlignment="Center"/>
@@ -521,7 +520,6 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </WrapPanel>
                 </ScrollViewer>
             </Grid>
         </Grid>
