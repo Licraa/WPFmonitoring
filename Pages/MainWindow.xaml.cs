@@ -303,6 +303,53 @@ namespace MonitoringApp.Pages
             }
         }
 
+        private async void DetailCard_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is MachineDetailViewModel clickedMachine)
+            {
+                // 1. Tutup semua kartu lain
+                foreach (var machine in _detailCollection)
+                {
+                    if (machine != clickedMachine)
+                    {
+                        machine.IsExpanded = false;
+                    }
+                }
+
+                if (!clickedMachine.IsExpanded)
+                {
+                    int currentIndex = _detailCollection.IndexOf(clickedMachine);
+
+                    // Hitung target posisi ke paling kiri di barisnya
+                    double cardTotalWidth = 410.0;
+                    double containerWidth = mesinListView.ActualWidth;
+                    int cardsPerRow = (int)(containerWidth / cardTotalWidth);
+                    if (cardsPerRow <= 0) cardsPerRow = 1;
+
+                    int rowIndex = currentIndex / cardsPerRow;
+                    int targetIndex = rowIndex * cardsPerRow;
+
+                    // Jika kartu BUKAN di posisi paling kiri
+                    if (currentIndex != targetIndex)
+                    {
+                        // Pindahkan kartu. XAML akan merespons ini dengan meluncurkannya secara smooth!
+                        _detailCollection.Move(currentIndex, targetIndex);
+
+                        // TUNGGU KARTU SELESAI MELUNCUR (sesuaikan dengan Duration di XAML)
+                        await Task.Delay(350);
+                    }
+
+                    // Setelah kartu sampai dan stabil, baru mekarkan grafiknya
+                    clickedMachine.IsExpanded = true;
+                }
+                else
+                {
+                    // Jika diklik lagi untuk menutup
+                    clickedMachine.IsExpanded = false;
+                }
+            }
+        }
+
         private void AppHeader_Loaded(object sender, RoutedEventArgs e)
         {
 

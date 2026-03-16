@@ -13,6 +13,7 @@ namespace MonitoringApp.ViewModels
         public string Name { get; set; } = string.Empty;
         public string Process { get; set; } = string.Empty;
         private string _remark = string.Empty;
+        private bool _isExpanded;
         public string Remark
         {
             get => _remark;
@@ -62,7 +63,11 @@ namespace MonitoringApp.ViewModels
                 }
             }
         }
-
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set { _isExpanded = value; OnPropertyChanged(); }
+        }
         public string Status => NilaiA0 == 1 ? "Active" : "Inactive";
 
         // Objek Shift (Nested ViewModels)
