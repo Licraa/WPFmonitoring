@@ -3,6 +3,7 @@
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:MonitoringApp.Controls"
+        xmlns:pages="clr-namespace:MonitoringApp.Pages"
         Title="Machine Uptime Monitoring" Height="900" Width="Auto" 
         Background="#F2F2F2"
         WindowState="Maximized"
@@ -559,37 +560,46 @@
                                             </Style>
                                         </Grid.Style>
 
-                                        <Border Width="1200" HorizontalAlignment="Left" Background="White" CornerRadius="15" BorderBrush="#CCCCCC" BorderThickness="1" Padding="30">
+                                        <Border Width="1200" HorizontalAlignment="Left" Background="White"
+        CornerRadius="15" BorderBrush="#CCCCCC" BorderThickness="1" Padding="30">
                                             <Grid>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
+                                                    <!-- Header: nama mesin + tab buttons -->
                                                     <RowDefinition Height="*"/>
+                                                    <!-- Content: Shift Chart ATAU Trend Chart -->
                                                 </Grid.RowDefinitions>
 
-                                                <!-- ═══ CHART HEADER ═══ -->
+                                                <!-- ═══════════════════════════════════════════════
+             ROW 0 — HEADER: Nama Mesin + Legend + Tab
+        ═══════════════════════════════════════════════ -->
                                                 <Grid Grid.Row="0">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <!-- Nama + Legend -->
+                                                        <RowDefinition Height="Auto"/>
+                                                        <!-- Tab Buttons -->
+                                                    </Grid.RowDefinitions>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
 
-                                                    <StackPanel Grid.Column="0" Grid.ColumnSpan="2"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center">
-                                                                                            <TextBlock Text="{Binding Name}"
-                                                       FontWeight="Bold" FontSize="30"
-                                                       Foreground="#1A1A2E"
-                                                       HorizontalAlignment="Center"/>
-                                                                                            <TextBlock Text="{Binding Line, StringFormat='LINE : {0}'}"
-                                                       FontWeight="SemiBold" FontSize="14"
-                                                       Foreground="#6B7280"
-                                                       HorizontalAlignment="Center"
-                                                       Margin="0,4,0,0"/>
+                                                    <!-- Nama Mesin + Line (tengah) -->
+                                                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}"
+                           FontWeight="Bold" FontSize="30"
+                           Foreground="#1A1A2E" HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Line, StringFormat='LINE : {0}'}"
+                           FontWeight="SemiBold" FontSize="14"
+                           Foreground="#6B7280" HorizontalAlignment="Center"
+                           Margin="0,4,0,0"/>
                                                     </StackPanel>
 
-
-                                                    <!-- Legend -->
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                    <!-- Legend Uptime/Downtime (kanan atas) -->
+                                                    <StackPanel Grid.Row="0" Grid.Column="1"
+                        Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
                                                         <Border Background="#E8F5E9" CornerRadius="6" Padding="10,5" Margin="0,0,8,0">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <Border Width="12" Height="12" CornerRadius="3" Margin="0,0,6,0" VerticalAlignment="Center">
@@ -600,7 +610,8 @@
                                                                         </LinearGradientBrush>
                                                                     </Border.Background>
                                                                 </Border>
-                                                                <TextBlock Text="UPTIME" FontSize="11" FontWeight="Bold" Foreground="#2E7D32" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="UPTIME" FontSize="11" FontWeight="Bold"
+                                   Foreground="#2E7D32" VerticalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
                                                         <Border Background="#FFEBEE" CornerRadius="6" Padding="10,5">
@@ -613,377 +624,414 @@
                                                                         </LinearGradientBrush>
                                                                     </Border.Background>
                                                                 </Border>
-                                                                <TextBlock Text="DOWNTIME" FontSize="11" FontWeight="Bold" Foreground="#C62828" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="DOWNTIME" FontSize="11" FontWeight="Bold"
+                                   Foreground="#C62828" VerticalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
                                                     </StackPanel>
+
+                                                    <!-- ★ TAB BUTTONS: SHIFT HARI INI | TREN HARIAN ★ -->
+                                                    <Border Grid.Row="1" Grid.ColumnSpan="2"
+                    HorizontalAlignment="Center" Margin="0,14,0,0"
+                    Background="#F3F4F6" CornerRadius="10" Padding="4">
+                                                        <StackPanel Orientation="Horizontal">
+
+                                                            <!-- TAB: Shift Hari Ini -->
+                                                            <Button Command="{Binding ShowShiftCommand}"
+                            Padding="18,7" Cursor="Hand" BorderThickness="0">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <Border x:Name="TabBd" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                                                                        <Border.Background>
+                                                                                            <SolidColorBrush Color="Transparent"/>
+                                                                                        </Border.Background>
+                                                                                        <StackPanel Orientation="Horizontal">
+                                                                                            <TextBlock Text="📊" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                                                            <TextBlock Text="Shift Hari Ini"
+                                                               FontSize="12" FontWeight="SemiBold"
+                                                               Foreground="#6B7280" VerticalAlignment="Center"
+                                                               x:Name="TabTxt"/>
+                                                                                        </StackPanel>
+                                                                                    </Border>
+                                                                                    <ControlTemplate.Triggers>
+                                                                                        <DataTrigger Binding="{Binding ShowShift}" Value="True">
+                                                                                            <Setter TargetName="TabBd"  Property="Background" Value="White"/>
+                                                                                            <Setter TargetName="TabTxt" Property="Foreground" Value="#1D4ED8"/>
+                                                                                            <Setter TargetName="TabBd"  Property="Effect">
+                                                                                                <Setter.Value>
+                                                                                                    <DropShadowEffect Color="Black" Opacity="0.08"
+                                                                              BlurRadius="6" ShadowDepth="1"/>
+                                                                                                </Setter.Value>
+                                                                                            </Setter>
+                                                                                        </DataTrigger>
+                                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                                            <Setter TargetName="TabBd" Property="Opacity" Value="0.85"/>
+                                                                                        </Trigger>
+                                                                                    </ControlTemplate.Triggers>
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                            </Button>
+
+                                                            <!-- TAB: Tren Harian -->
+                                                            <Button Command="{Binding ShowTrendCommand}"
+                                                                Padding="18,7" Cursor="Hand" BorderThickness="0">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <Border x:Name="TabBd" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                                                                        <Border.Background>
+                                                                                            <SolidColorBrush Color="Transparent"/>
+                                                                                        </Border.Background>
+                                                                                        <StackPanel Orientation="Horizontal">
+                                                                                            <TextBlock Text="📈" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                                                            <TextBlock Text="Tren Harian"
+                                                                                               FontSize="12" FontWeight="SemiBold"
+                                                                                               Foreground="#6B7280" VerticalAlignment="Center"
+                                                                                               x:Name="TabTxt"/>        
+                                                                                        </StackPanel>
+                                                                                    </Border>
+                                                                                    <ControlTemplate.Triggers>
+                                                                                        <DataTrigger Binding="{Binding ShowTrend}" Value="True">
+                                                                                            <Setter TargetName="TabBd"  Property="Background" Value="White"/>
+                                                                                            <Setter TargetName="TabTxt" Property="Foreground" Value="#1D4ED8"/>
+                                                                                            <Setter TargetName="TabBd"  Property="Effect">
+                                                                                                <Setter.Value>
+                                                                                                    <DropShadowEffect Color="Black" Opacity="0.08"
+                                                                                                        BlurRadius="6" ShadowDepth="1"/>
+                                                                                                </Setter.Value>
+                                                                                            </Setter>
+                                                                                        </DataTrigger>
+                                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                                            <Setter TargetName="TabBd" Property="Opacity" Value="0.85"/>
+                                                                                        </Trigger>
+                                                                                    </ControlTemplate.Triggers>
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                            </Button>
+
+                                                        </StackPanel>
+                                                    </Border>
                                                 </Grid>
 
-                                                <!-- ═══ CHART BODY ═══ -->
+                                                <!-- ═══════════════════════════════════════════════ ROW 1 — CONTENT PANEL (Shift ATAU Trend ═══════════════════════════════════════════════ -->
                                                 <Grid Grid.Row="1" Margin="0,20,0,0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="45"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <!-- Row 0: Label % -->
-                                                        <RowDefinition Height="Auto"/>
-                                                        <!-- Row 1: Count Badge ← BARU -->
-                                                        <RowDefinition Height="220"/>
-                                                        <!-- Row 2: Bar Chart -->
-                                                        <RowDefinition Height="Auto"/>
-                                                        <!-- Row 3: X-Axis -->
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-
-                                                    <!-- COUNT BADGE — taruh SEBELUM UniformGrid bar -->
-                                                    <UniformGrid Grid.Column="1" Grid.Row="1" Columns="3" Margin="10,0,10,6">
-                                                        <StackPanel HorizontalAlignment="Center">
-                                                            <Border Background="#EFF6FF" CornerRadius="12" Padding="10,3" HorizontalAlignment="Center">
-                                                                <TextBlock Text="{Binding Shift1.Count, StringFormat='📦 {0} pcs'}"
-                       FontSize="11" FontWeight="Bold" Foreground="#1D4ED8"/>
-                                                            </Border>
-                                                        </StackPanel>
-                                                        <StackPanel HorizontalAlignment="Center">
-                                                            <Border Background="#FFF7ED" CornerRadius="12" Padding="10,3" HorizontalAlignment="Center">
-                                                                <TextBlock Text="{Binding Shift2.Count, StringFormat='📦 {0} pcs'}"
-                       FontSize="11" FontWeight="Bold" Foreground="#C2410C"/>
-                                                            </Border>
-                                                        </StackPanel>
-                                                        <StackPanel HorizontalAlignment="Center">
-                                                            <Border Background="#F5F3FF" CornerRadius="12" Padding="10,3" HorizontalAlignment="Center">
-                                                                <TextBlock Text="{Binding Shift3.Count, StringFormat='📦 {0} pcs'}"
-                       FontSize="11" FontWeight="Bold" Foreground="#6D28D9"/>
-                                                            </Border>
-                                                        </StackPanel>
-                                                    </UniformGrid>
-
-                                                    <!-- Label Persentase — di atas semua bar -->
-                                                    <UniformGrid Grid.Column="1" Grid.Row="0" Columns="3" Margin="10,0,10,6">
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift1.UptimePercent, StringFormat='{}{0}%'}"
-                                                                       FontWeight="Bold" FontSize="13" Foreground="#2E7D32"/>
-                                                            <TextBlock Text=" / " FontSize="13" Foreground="#9CA3AF"/>
-                                                            <TextBlock Text="{Binding Shift1.DowntimePercent, StringFormat='{}{0}%'}"
-                                                                       FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift2.UptimePercent, StringFormat='{}{0}%'}"
-                                                                       FontWeight="Bold" FontSize="13" Foreground="#2E7D32"/>
-                                                            <TextBlock Text=" / " FontSize="13" Foreground="#9CA3AF"/>
-                                                            <TextBlock Text="{Binding Shift2.DowntimePercent, StringFormat='{}{0}%'}"
-                                                                       FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <TextBlock Text="{Binding Shift3.UptimePercent, StringFormat='{}{0}%'}"
-                                                                       FontWeight="Bold" FontSize="13" Foreground="#2E7D32"/>
-                                                            <TextBlock Text=" / " FontSize="13" Foreground="#9CA3AF"/>
-                                                            <TextBlock Text="{Binding Shift3.DowntimePercent, StringFormat='{}{0}%'}"
-                                                                       FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
-                                                        </StackPanel>
-                                                    </UniformGrid>
-                                                    
-
-                                                    <!-- Y-Axis Labels -->
-                                                    <Grid Grid.Column="0" Grid.Row="2">
-                                                        <TextBlock Text="100%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                                                        <TextBlock Text="75%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,50,6,0"/>
-                                                        <TextBlock Text="50%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,105,6,0"/>
-                                                        <TextBlock Text="25%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,160,6,0"/>
-                                                        <TextBlock Text="0%" VerticalAlignment="Bottom" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,0,6,2"/>
-                                                        <TextBlock Text="%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#D1D5DB" FontSize="9" Margin="0,-14,0,0" FontStyle="Italic"/>
-                                                    </Grid>
-
-                                                    <!-- Chart Area -->
-                                                    <Grid Grid.Column="1" Grid.Row="2">
-                                                        <!-- Horizontal Grid Lines -->
-                                                        <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,0,0,0"/>
-                                                        <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,55,0,0"/>
-                                                        <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,110,0,0"/>
-                                                        <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,165,0,0"/>
-                                                        <Border BorderBrush="#E5E7EB" BorderThickness="0,0,0,2" VerticalAlignment="Bottom" Height="2" Margin="0,0,0,0"/>
-
-                                                        <!-- 3 Grouped Bars (Shift 1, 2, 3) -->
-                                                        <UniformGrid Columns="3" VerticalAlignment="Bottom" Height="220" Margin="10,0">
-
-                                                            <!-- SHIFT 1 -->
-                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-
-                                                                <!-- Uptime S1 -->
-                                                                <Grid VerticalAlignment="Bottom" Margin="0,0,4,0">
-                                                                    <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
-                                                                        <ProgressBar Value="{Binding Shift1.UptimePercent}" Maximum="100"
-                                                                            Width="220" Height="52" BorderThickness="0">
-                                                                            <ProgressBar.LayoutTransform>
-                                                                                <RotateTransform Angle="270"/>
-                                                                            </ProgressBar.LayoutTransform>
-                                                                            <ProgressBar.Template>
-                                                                                <ControlTemplate TargetType="ProgressBar">
-                                                                                    <Grid>
-                                                                                        <Border x:Name="PART_Track" Background="#E8F5E9"/>
-                                                                                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
-                                                                                            <Border.Background>
-                                                                                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                                                                                    <GradientStop Color="#1B5E20" Offset="0.0"/>
-                                                                                                    <GradientStop Color="#4CAF50" Offset="0.5"/>
-                                                                                                    <GradientStop Color="#81C784" Offset="1.0"/>
-                                                                                                </LinearGradientBrush>
-                                                                                            </Border.Background>
-                                                                                        </Border>
-                                                                                    </Grid>
-                                                                                </ControlTemplate>
-                                                                            </ProgressBar.Template>
-                                                                        </ProgressBar>
-                                                                    </Border>
-                                                                    <TextBlock Text="U" FontSize="10" FontWeight="Bold" Foreground="White"
-                                                                     HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
-                                                                </Grid>
-
-
-                                                                <!-- Downtime S1 -->
-                                                                <Grid VerticalAlignment="Bottom" Margin="4,0,0,0">
-                                                                    <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
-                                                                        <ProgressBar Value="{Binding Shift1.DowntimePercent}" Maximum="100"
-                                                                            Width="220" Height="52" BorderThickness="0">
-                                                                            <ProgressBar.LayoutTransform>
-                                                                                <RotateTransform Angle="270"/>
-                                                                            </ProgressBar.LayoutTransform>
-                                                                            <ProgressBar.Template>
-                                                                                <ControlTemplate TargetType="ProgressBar">
-                                                                                    <Grid>
-                                                                                        <Border x:Name="PART_Track" Background="#FFEBEE"/>
-                                                                                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
-                                                                                            <Border.Background>
-                                                                                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                                                                                    <GradientStop Color="#B71C1C" Offset="0.0"/>
-                                                                                                    <GradientStop Color="#EF5350" Offset="0.5"/>
-                                                                                                    <GradientStop Color="#EF9A9A" Offset="1.0"/>
-                                                                                                </LinearGradientBrush>
-                                                                                            </Border.Background>
-                                                                                        </Border>
-                                                                                    </Grid>
-                                                                                </ControlTemplate>
-                                                                            </ProgressBar.Template>
-                                                                        </ProgressBar>
-                                                                    </Border>
-                                                                    <TextBlock Text="D" FontSize="10" FontWeight="Bold" Foreground="White"
-                                                                     HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
-                                                                </Grid>
-                                                            </StackPanel>
-
-                                                            <!-- SHIFT 2 -->
-                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                                                                <!-- Uptime S2 -->
-                                                                <Grid VerticalAlignment="Bottom" Margin="0,0,4,0">
-                                                                    <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
-                                                                        <ProgressBar Value="{Binding Shift2.UptimePercent}" Maximum="100"
-                                                                     Width="220" Height="52" BorderThickness="0">
-                                                                            <ProgressBar.LayoutTransform>
-                                                                                <RotateTransform Angle="270"/>
-                                                                            </ProgressBar.LayoutTransform>
-                                                                            <ProgressBar.Template>
-                                                                                <ControlTemplate TargetType="ProgressBar">
-                                                                                    <Grid>
-                                                                                        <Border x:Name="PART_Track" Background="#E8F5E9"/>
-                                                                                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
-                                                                                            <Border.Background>
-                                                                                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                                                                                    <GradientStop Color="#1B5E20" Offset="0.0"/>
-                                                                                                    <GradientStop Color="#4CAF50" Offset="0.5"/>
-                                                                                                    <GradientStop Color="#81C784" Offset="1.0"/>
-                                                                                                </LinearGradientBrush>
-                                                                                            </Border.Background>
-                                                                                        </Border>
-                                                                                    </Grid>
-                                                                                </ControlTemplate>
-                                                                            </ProgressBar.Template>
-                                                                        </ProgressBar>
-                                                                    </Border>
-                                                                    <TextBlock Text="U" FontSize="10" FontWeight="Bold" Foreground="White"
-                                                                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
-                                                                </Grid>
-                                                                <!-- Downtime S2 -->
-                                                                <Grid VerticalAlignment="Bottom" Margin="4,0,0,0">
-                                                                    <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
-                                                                        <ProgressBar Value="{Binding Shift2.DowntimePercent}" Maximum="100"
-                                                                            Width="220" Height="52" BorderThickness="0">
-                                                                            <ProgressBar.LayoutTransform>
-                                                                                <RotateTransform Angle="270"/>
-                                                                            </ProgressBar.LayoutTransform>
-                                                                            <ProgressBar.Template>
-                                                                                <ControlTemplate TargetType="ProgressBar">
-                                                                                    <Grid>
-                                                                                        <Border x:Name="PART_Track" Background="#FFEBEE"/>
-                                                                                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
-                                                                                            <Border.Background>
-                                                                                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                                                                                    <GradientStop Color="#B71C1C" Offset="0.0"/>
-                                                                                                    <GradientStop Color="#EF5350" Offset="0.5"/>
-                                                                                                    <GradientStop Color="#EF9A9A" Offset="1.0"/>
-                                                                                                </LinearGradientBrush>
-                                                                                            </Border.Background>
-                                                                                        </Border>
-                                                                                    </Grid>
-                                                                                </ControlTemplate>
-                                                                            </ProgressBar.Template>
-                                                                        </ProgressBar>
-                                                                    </Border>
-                                                                    <TextBlock Text="D" FontSize="10" FontWeight="Bold" Foreground="White"
-                                                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
-                                                                </Grid>
-                                                            </StackPanel>
-
-                                                            <!-- SHIFT 3 -->
-                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                                                                <!-- Uptime S3 -->
-                                                                <Grid VerticalAlignment="Bottom" Margin="0,0,4,0">
-                                                                    <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
-                                                                        <ProgressBar Value="{Binding Shift3.UptimePercent}" Maximum="100"
-                                                                            Width="220" Height="52" BorderThickness="0">
-                                                                            <ProgressBar.LayoutTransform>
-                                                                                <RotateTransform Angle="270"/>
-                                                                            </ProgressBar.LayoutTransform>
-                                                                            <ProgressBar.Template>
-                                                                                <ControlTemplate TargetType="ProgressBar">
-                                                                                    <Grid>
-                                                                                        <Border x:Name="PART_Track" Background="#E8F5E9"/>
-                                                                                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
-                                                                                            <Border.Background>
-                                                                                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                                                                                    <GradientStop Color="#1B5E20" Offset="0.0"/>
-                                                                                                    <GradientStop Color="#4CAF50" Offset="0.5"/>
-                                                                                                    <GradientStop Color="#81C784" Offset="1.0"/>
-                                                                                                </LinearGradientBrush>
-                                                                                            </Border.Background>
-                                                                                        </Border>
-                                                                                    </Grid>
-                                                                                </ControlTemplate>
-                                                                            </ProgressBar.Template>
-                                                                        </ProgressBar>
-                                                                    </Border>
-                                                                    <TextBlock Text="U" FontSize="10" FontWeight="Bold" Foreground="White"
-                                                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
-                                                                </Grid>
-                                                                <!-- Downtime S3 -->
-                                                                <Grid VerticalAlignment="Bottom" Margin="4,0,0,0">
-                                                                    <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
-                                                                        <ProgressBar Value="{Binding Shift3.DowntimePercent}" Maximum="100"
-                                                                            Width="220" Height="52" BorderThickness="0">
-                                                                            <ProgressBar.LayoutTransform>
-                                                                                <RotateTransform Angle="270"/>
-                                                                            </ProgressBar.LayoutTransform>
-                                                                            <ProgressBar.Template>
-                                                                                <ControlTemplate TargetType="ProgressBar">
-                                                                                    <Grid>
-                                                                                        <Border x:Name="PART_Track" Background="#FFEBEE"/>
-                                                                                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
-                                                                                            <Border.Background>
-                                                                                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
-                                                                                                    <GradientStop Color="#B71C1C" Offset="0.0"/>
-                                                                                                    <GradientStop Color="#EF5350" Offset="0.5"/>
-                                                                                                    <GradientStop Color="#EF9A9A" Offset="1.0"/>
-                                                                                                </LinearGradientBrush>
-                                                                                            </Border.Background>
-                                                                                        </Border>
-                                                                                    </Grid>
-                                                                                </ControlTemplate>
-                                                                            </ProgressBar.Template>
-                                                                        </ProgressBar>
-                                                                    </Border>
-                                                                    <TextBlock Text="D" FontSize="10" FontWeight="Bold" Foreground="White"
-                                                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
-                                                                </Grid>
-                                                            </StackPanel>
-
-
-                                                        </UniformGrid>
-                                                    </Grid>
-
-                                                    <!-- Duration Info Row -->
-                                                    <Grid Grid.Column="1" Grid.Row="4" Margin="10,10,10,0">
+                                                    <!-- ── TAB 0: CHART SHIFT HARI INI (existing bar chart) ── -->
+                                                    <Grid>
+                                                        <Grid.Style>
+                                                            <Style TargetType="Grid">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ShowTrend}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Grid.Style>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="45"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="220"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
 
-                                                        <!-- Shift 1 Duration Cards -->
-                                                        <Border Grid.Column="0" Margin="4,0" Background="#F8FAFC" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Padding="8,6">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
+                                                        <!-- COUNT BADGE -->
+                                                        <UniformGrid Grid.Column="1" Grid.Row="1" Columns="3" Margin="10,0,10,6">
+                                                            <StackPanel HorizontalAlignment="Center">
+                                                                <Border Background="#EFF6FF" CornerRadius="12" Padding="10,3" HorizontalAlignment="Center">
+                                                                    <TextBlock Text="{Binding Shift1.Count, StringFormat='📦 {0} pcs'}"
+                                       FontSize="11" FontWeight="Bold" Foreground="#1D4ED8"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                            <StackPanel HorizontalAlignment="Center">
+                                                                <Border Background="#FFF7ED" CornerRadius="12" Padding="10,3" HorizontalAlignment="Center">
+                                                                    <TextBlock Text="{Binding Shift2.Count, StringFormat='📦 {0} pcs'}"
+                                       FontSize="11" FontWeight="Bold" Foreground="#C2410C"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                            <StackPanel HorizontalAlignment="Center">
+                                                                <Border Background="#F5F3FF" CornerRadius="12" Padding="10,3" HorizontalAlignment="Center">
+                                                                    <TextBlock Text="{Binding Shift3.Count, StringFormat='📦 {0} pcs'}"
+                                       FontSize="11" FontWeight="Bold" Foreground="#6D28D9"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                        </UniformGrid>
 
-                                                                <!-- UP -->
-                                                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                                                    <TextBlock Text="▲ UP" FontSize="9" Foreground="#2E7D32" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding Shift1.Uptime}" FontSize="11" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Center"/>
+                                                        <!-- LABEL PERSENTASE -->
+                                                        <UniformGrid Grid.Column="1" Grid.Row="0" Columns="3" Margin="10,0,10,6">
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift1.UptimePercent, StringFormat='{}{0}%'}"
+                                   FontWeight="Bold" FontSize="13" Foreground="#2E7D32"/>
+                                                                <TextBlock Text=" / " FontSize="13" Foreground="#9CA3AF"/>
+                                                                <TextBlock Text="{Binding Shift1.DowntimePercent, StringFormat='{}{0}%'}"
+                                   FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
+                                                            </StackPanel>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift2.UptimePercent, StringFormat='{}{0}%'}"
+                                   FontWeight="Bold" FontSize="13" Foreground="#2E7D32"/>
+                                                                <TextBlock Text=" / " FontSize="13" Foreground="#9CA3AF"/>
+                                                                <TextBlock Text="{Binding Shift2.DowntimePercent, StringFormat='{}{0}%'}"
+                                   FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
+                                                            </StackPanel>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock Text="{Binding Shift3.UptimePercent, StringFormat='{}{0}%'}"
+                                   FontWeight="Bold" FontSize="13" Foreground="#2E7D32"/>
+                                                                <TextBlock Text=" / " FontSize="13" Foreground="#9CA3AF"/>
+                                                                <TextBlock Text="{Binding Shift3.DowntimePercent, StringFormat='{}{0}%'}"
+                                   FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
+                                                            </StackPanel>
+                                                        </UniformGrid>
+
+                                                    <!-- Y-Axis Labels -->
+                                                        <Grid Grid.Column="0" Grid.Row="2">
+                                                            <TextBlock Text="100%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                                            <TextBlock Text="75%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,50,6,0"/>
+                                                            <TextBlock Text="50%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,105,6,0"/>
+                                                            <TextBlock Text="25%" VerticalAlignment="Top" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,160,6,0"/>
+                                                            <TextBlock Text="0%" VerticalAlignment="Bottom" HorizontalAlignment="Right" Foreground="#9CA3AF" FontSize="10" FontWeight="SemiBold" Margin="0,0,6,2"/>
+                                                        </Grid>
+
+                                                        <Grid Grid.Column="1" Grid.Row="2">
+                                                            <!-- Horizontal Grid Lines -->
+                                                            <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,0,0,0"/>
+                                                            <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,55,0,0"/>
+                                                            <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,110,0,0"/>
+                                                            <Border BorderBrush="#F3F4F6" BorderThickness="0,1,0,0" VerticalAlignment="Top" Height="1" Margin="0,165,0,0"/>
+                                                            <Border BorderBrush="#E5E7EB" BorderThickness="0,0,0,2" VerticalAlignment="Bottom" Height="2" Margin="0,0,0,0"/>
+
+                                                            <!-- 3 Grouped Bars (Shift 1, 2, 3) -->
+                                                            <UniformGrid Columns="3" VerticalAlignment="Bottom" Height="220" Margin="10,0">
+
+                                                                <!-- SHIFT 1 -->
+                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+
+                                                                    <!-- Uptime S1 -->
+                                                                    <Grid VerticalAlignment="Bottom" Margin="0,0,4,0">
+                                                                        <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
+                                                                            <ProgressBar Value="{Binding Shift1.UptimePercent}" Maximum="100"
+                                                                            Width="220" Height="52" BorderThickness="0">
+                                                                                <ProgressBar.LayoutTransform>
+                                                                                    <RotateTransform Angle="270"/>
+                                                                                </ProgressBar.LayoutTransform>
+                                                                                <ProgressBar.Template>
+                                                                                    <ControlTemplate TargetType="ProgressBar">
+                                                                                        <Grid>
+                                                                                            <Border x:Name="PART_Track" Background="#E8F5E9"/>
+                                                                                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                                                                                <Border.Background>
+                                                                                                    <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                                                                                        <GradientStop Color="#1B5E20" Offset="0.0"/>
+                                                                                                        <GradientStop Color="#4CAF50" Offset="0.5"/>
+                                                                                                        <GradientStop Color="#81C784" Offset="1.0"/>
+                                                                                                    </LinearGradientBrush>
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </Grid>
+                                                                                    </ControlTemplate>
+                                                                                </ProgressBar.Template>
+                                                                            </ProgressBar>
+                                                                        </Border>
+                                                                        <TextBlock Text="U" FontSize="10" FontWeight="Bold" Foreground="White"
+                                                                     HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                                    </Grid>
+
+
+                                                                    <!-- Downtime S1 -->
+                                                                    <Grid VerticalAlignment="Bottom" Margin="4,0,0,0">
+                                                                        <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
+                                                                            <ProgressBar Value="{Binding Shift1.DowntimePercent}" Maximum="100"
+                                                                            Width="220" Height="52" BorderThickness="0">
+                                                                                <ProgressBar.LayoutTransform>
+                                                                                    <RotateTransform Angle="270"/>
+                                                                                </ProgressBar.LayoutTransform>
+                                                                                <ProgressBar.Template>
+                                                                                    <ControlTemplate TargetType="ProgressBar">
+                                                                                        <Grid>
+                                                                                            <Border x:Name="PART_Track" Background="#FFEBEE"/>
+                                                                                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                                                                                <Border.Background>
+                                                                                                    <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                                                                                        <GradientStop Color="#B71C1C" Offset="0.0"/>
+                                                                                                        <GradientStop Color="#EF5350" Offset="0.5"/>
+                                                                                                        <GradientStop Color="#EF9A9A" Offset="1.0"/>
+                                                                                                    </LinearGradientBrush>
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </Grid>
+                                                                                    </ControlTemplate>
+                                                                                </ProgressBar.Template>
+                                                                            </ProgressBar>
+                                                                        </Border>
+                                                                        <TextBlock Text="D" FontSize="10" FontWeight="Bold" Foreground="White"
+                                                                     HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                                    </Grid>
                                                                 </StackPanel>
 
-                                                                <!-- SHIFT Label Tengah -->
-                                                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" Margin="10,0">
-                                                                    <TextBlock Text="SHIFT" FontSize="9" Foreground="#1D4ED8" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="1st" FontSize="11" FontWeight="Bold" Foreground="#1D4ED8" HorizontalAlignment="Center"/>
+                                                                <!-- SHIFT 2 -->
+                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                                                                    <!-- Uptime S2 -->
+                                                                    <Grid VerticalAlignment="Bottom" Margin="0,0,4,0">
+                                                                        <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
+                                                                            <ProgressBar Value="{Binding Shift2.UptimePercent}" Maximum="100"
+                                                                     Width="220" Height="52" BorderThickness="0">
+                                                                                <ProgressBar.LayoutTransform>
+                                                                                    <RotateTransform Angle="270"/>
+                                                                                </ProgressBar.LayoutTransform>
+                                                                                <ProgressBar.Template>
+                                                                                    <ControlTemplate TargetType="ProgressBar">
+                                                                                        <Grid>
+                                                                                            <Border x:Name="PART_Track" Background="#E8F5E9"/>
+                                                                                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                                                                                <Border.Background>
+                                                                                                    <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                                                                                        <GradientStop Color="#1B5E20" Offset="0.0"/>
+                                                                                                        <GradientStop Color="#4CAF50" Offset="0.5"/>
+                                                                                                        <GradientStop Color="#81C784" Offset="1.0"/>
+                                                                                                    </LinearGradientBrush>
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </Grid>
+                                                                                    </ControlTemplate>
+                                                                                </ProgressBar.Template>
+                                                                            </ProgressBar>
+                                                                        </Border>
+                                                                        <TextBlock Text="U" FontSize="10" FontWeight="Bold" Foreground="White"
+                                                                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                                    </Grid>
+                                                                    <!-- Downtime S2 -->
+                                                                    <Grid VerticalAlignment="Bottom" Margin="4,0,0,0">
+                                                                        <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
+                                                                            <ProgressBar Value="{Binding Shift2.DowntimePercent}" Maximum="100"
+                                                                            Width="220" Height="52" BorderThickness="0">
+                                                                                <ProgressBar.LayoutTransform>
+                                                                                    <RotateTransform Angle="270"/>
+                                                                                </ProgressBar.LayoutTransform>
+                                                                                <ProgressBar.Template>
+                                                                                    <ControlTemplate TargetType="ProgressBar">
+                                                                                        <Grid>
+                                                                                            <Border x:Name="PART_Track" Background="#FFEBEE"/>
+                                                                                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                                                                                <Border.Background>
+                                                                                                    <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                                                                                        <GradientStop Color="#B71C1C" Offset="0.0"/>
+                                                                                                        <GradientStop Color="#EF5350" Offset="0.5"/>
+                                                                                                        <GradientStop Color="#EF9A9A" Offset="1.0"/>
+                                                                                                    </LinearGradientBrush>
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </Grid>
+                                                                                    </ControlTemplate>
+                                                                                </ProgressBar.Template>
+                                                                            </ProgressBar>
+                                                                        </Border>
+                                                                        <TextBlock Text="D" FontSize="10" FontWeight="Bold" Foreground="White"
+                                                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                                    </Grid>
                                                                 </StackPanel>
 
-                                                                <!-- DOWN -->
-                                                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                                                    <TextBlock Text="▼ DOWN" FontSize="9" Foreground="#C62828" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding Shift1.Downtime}" FontSize="11" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Center"/>
+                                                                <!-- SHIFT 3 -->
+                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                                                                    <!-- Uptime S3 -->
+                                                                    <Grid VerticalAlignment="Bottom" Margin="0,0,4,0">
+                                                                        <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
+                                                                            <ProgressBar Value="{Binding Shift3.UptimePercent}" Maximum="100"
+                                                                            Width="220" Height="52" BorderThickness="0">
+                                                                                <ProgressBar.LayoutTransform>
+                                                                                    <RotateTransform Angle="270"/>
+                                                                                </ProgressBar.LayoutTransform>
+                                                                                <ProgressBar.Template>
+                                                                                    <ControlTemplate TargetType="ProgressBar">
+                                                                                        <Grid>
+                                                                                            <Border x:Name="PART_Track" Background="#E8F5E9"/>
+                                                                                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                                                                                <Border.Background>
+                                                                                                    <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                                                                                        <GradientStop Color="#1B5E20" Offset="0.0"/>
+                                                                                                        <GradientStop Color="#4CAF50" Offset="0.5"/>
+                                                                                                        <GradientStop Color="#81C784" Offset="1.0"/>
+                                                                                                    </LinearGradientBrush>
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </Grid>
+                                                                                    </ControlTemplate>
+                                                                                </ProgressBar.Template>
+                                                                            </ProgressBar>
+                                                                        </Border>
+                                                                        <TextBlock Text="U" FontSize="10" FontWeight="Bold" Foreground="White"
+                                                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                                    </Grid>
+                                                                    <!-- Downtime S3 -->
+                                                                    <Grid VerticalAlignment="Bottom" Margin="4,0,0,0">
+                                                                        <Border CornerRadius="6,6,0,0" ClipToBounds="True" Width="52" Height="220" VerticalAlignment="Bottom">
+                                                                            <ProgressBar Value="{Binding Shift3.DowntimePercent}" Maximum="100"
+                                                                            Width="220" Height="52" BorderThickness="0">
+                                                                                <ProgressBar.LayoutTransform>
+                                                                                    <RotateTransform Angle="270"/>
+                                                                                </ProgressBar.LayoutTransform>
+                                                                                <ProgressBar.Template>
+                                                                                    <ControlTemplate TargetType="ProgressBar">
+                                                                                        <Grid>
+                                                                                            <Border x:Name="PART_Track" Background="#FFEBEE"/>
+                                                                                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left">
+                                                                                                <Border.Background>
+                                                                                                    <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                                                                                                        <GradientStop Color="#B71C1C" Offset="0.0"/>
+                                                                                                        <GradientStop Color="#EF5350" Offset="0.5"/>
+                                                                                                        <GradientStop Color="#EF9A9A" Offset="1.0"/>
+                                                                                                    </LinearGradientBrush>
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </Grid>
+                                                                                    </ControlTemplate>
+                                                                                </ProgressBar.Template>
+                                                                            </ProgressBar>
+                                                                        </Border>
+                                                                        <TextBlock Text="D" FontSize="10" FontWeight="Bold" Foreground="White"
+                                                                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                                    </Grid>
                                                                 </StackPanel>
-                                                            </Grid>
-                                                        </Border>
 
-                                                        <!-- Shift 2 Duration Cards -->
-                                                        <Border Grid.Column="1" Margin="4,0" Background="#F8FAFC" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Padding="8,6">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                                                    <TextBlock Text="▲ UP" FontSize="9" Foreground="#2E7D32" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding Shift2.Uptime}" FontSize="11" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Center"/>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" Margin="10,0">
-                                                                    <TextBlock Text="SHIFT" FontSize="9" Foreground="#C2410C" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="2nd" FontSize="11" FontWeight="Bold" Foreground="#C2410C" HorizontalAlignment="Center"/>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                                                    <TextBlock Text="▼ DOWN" FontSize="9" Foreground="#C62828" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding Shift2.Downtime}" FontSize="11" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Center"/>
-                                                                </StackPanel>
-                                                            </Grid>
-                                                        </Border>
 
-                                                        <!-- Shift 3 Duration Cards -->
-                                                        <Border Grid.Column="2" Margin="4,0" Background="#F8FAFC" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Padding="8,6">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                                                    <TextBlock Text="▲ UP" FontSize="9" Foreground="#2E7D32" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding Shift3.Uptime}" FontSize="11" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Center"/>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" Margin="10,0">
-                                                                    <TextBlock Text="SHIFT" FontSize="9" Foreground="#6D28D9" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="3rd" FontSize="11" FontWeight="Bold" Foreground="#6D28D9" HorizontalAlignment="Center"/>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                                                    <TextBlock Text="▼ DOWN" FontSize="9" Foreground="#C62828" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding Shift3.Downtime}" FontSize="11" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Center"/>
-                                                                </StackPanel>
-                                                            </Grid>
-                                                        </Border>
+                                                            </UniformGrid>
+                                                        </Grid>
+
                                                     </Grid>
+                                                    <!-- END TAB 0 -->
+
+                                                    <!-- ── TAB 1: TREN HARIAN (TrendChartControl) ── -->
+                                                    <controls:TrendChartControl
+                                                        TrendData="{Binding TrendData}"
+                                                        TrendDays="7">
+                                                        <controls:TrendChartControl.Style>
+                                                            <Style TargetType="controls:TrendChartControl">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ShowTrend}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </controls:TrendChartControl.Style>
+                                                    </controls:TrendChartControl>
+
                                                 </Grid>
+                                                <!-- END ROW 1 content -->
+
                                             </Grid>
                                         </Border>
                                     </Grid>
