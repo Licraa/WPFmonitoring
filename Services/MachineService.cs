@@ -20,17 +20,28 @@ namespace MonitoringApp.Services
         }
 
         // --- 1. GET ALL (READ) ---
+        // --- 1. GET ALL (READ) ---
         public List<MachineDetailViewModel> GetAllMachines()
         {
             var query = from l in _context.Lines.AsNoTracking()
                         join dr in _context.DataRealtimes.AsNoTracking() on l.Id equals dr.Id into joinedDr
                         from dr in joinedDr.DefaultIfEmpty()
-                        join s1 in _context.Shift1s.AsNoTracking() on l.Id equals s1.Id into joinedS1
+
+                            // 🌟 AMBIL DARI PANCI BARU (MachineShiftDatas - Shift 1)
+                        join s1 in _context.MachineShiftDatas.AsNoTracking().Where(x => x.ShiftNumber == 1)
+                             on l.Id equals s1.Id into joinedS1
                         from s1 in joinedS1.DefaultIfEmpty()
-                        join s2 in _context.Shift2s.AsNoTracking() on l.Id equals s2.Id into joinedS2
+
+                            // 🌟 AMBIL DARI PANCI BARU (MachineShiftDatas - Shift 2)
+                        join s2 in _context.MachineShiftDatas.AsNoTracking().Where(x => x.ShiftNumber == 2)
+                             on l.Id equals s2.Id into joinedS2
                         from s2 in joinedS2.DefaultIfEmpty()
-                        join s3 in _context.Shift3s.AsNoTracking() on l.Id equals s3.Id into joinedS3
+
+                            // 🌟 AMBIL DARI PANCI BARU (MachineShiftDatas - Shift 3)
+                        join s3 in _context.MachineShiftDatas.AsNoTracking().Where(x => x.ShiftNumber == 3)
+                             on l.Id equals s3.Id into joinedS3
                         from s3 in joinedS3.DefaultIfEmpty()
+
                         orderby l.LineProduction, l.Id
                         select new MachineDetailViewModel
                         {
@@ -45,6 +56,8 @@ namespace MonitoringApp.Services
                             PartHours = dr != null ? dr.PartHours : 0,
                             Cycle = dr != null ? dr.DurasiTerakhirA4 : 0,
                             AvgCycle = dr != null ? dr.RataRataTerakhirA4 : 0,
+
+                            // Mapping Data Shift ke UI
                             Shift1 = s1 == null ? new ShiftSummaryViewModel() : new ShiftSummaryViewModel
                             {
                                 Count = s1.NilaiTerakhirA2,

@@ -19,11 +19,25 @@ namespace MonitoringApp
     public partial class App : Application
     {
         // Container Service Provider untuk akses global di seluruh aplikasi
+
         public static IServiceProvider ServiceProvider { get; private set; } = null!;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             // 1. SETUP EXCEPTION HANDLING (Agar aplikasi tidak langsung close jika ada error)
+            var args = Environment.GetCommandLineArgs();
+            bool isEfDesignTime = Array.Exists(args, a =>
+                a.Contains("Microsoft.EntityFrameworkCore.Design") ||
+                a.Contains("ef.dll") ||
+                a.Contains("efcore"));
+            if (isEfDesignTime)
+            {
+                Shutdown();
+                return;
+            }
+
+            // 1. SETUP EXCEPTION HANDLING (tidak berubah)
+            this.DispatcherUnhandledException += OnDispatcherUnhandledException;
             this.DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
@@ -92,8 +106,6 @@ namespace MonitoringApp
                         using (var scope = ServiceProvider.CreateScope())
                         {
                             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                            // Pastikan Anda sudah menjalankan DROP TABLE di SSMS jika ingin skema baru (Cascade)
-                            context.Database.EnsureCreated();
                         }
                     }
                     catch (Exception dbEx)

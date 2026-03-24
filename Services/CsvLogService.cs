@@ -10,9 +10,7 @@ namespace MonitoringApp.Services
     public class CsvLogService
     {
         private readonly string _baseFolder = "data_log_monitoring";
-
         private readonly SettingService _settingService;
-
         public CsvLogService(SettingService settingService)
         {
             _settingService = settingService;

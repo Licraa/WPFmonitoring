@@ -75,46 +75,15 @@ namespace MonitoringApp.Controls
             => Dispatcher.InvokeAsync(DrawChart);
 
         // ══════════════════════════════════════════════════════════════════
-        //  PAGINATION BUTTONS
-        // ══════════════════════════════════════════════════════════════════
-
-        private void Btn7_Click(object sender, RoutedEventArgs e) { TrendDays = 7; RefreshPaginationStyle(); }
-        private void Btn14_Click(object sender, RoutedEventArgs e) { TrendDays = 14; RefreshPaginationStyle(); }
-        private void Btn30_Click(object sender, RoutedEventArgs e) { TrendDays = 30; RefreshPaginationStyle(); }
-
-        private void RefreshPaginationStyle()
-        {
-            var inactiveBg = new SolidColorBrush(Color.FromRgb(0xF3, 0xF4, 0xF6));
-            var inactiveFg = new SolidColorBrush(Color.FromRgb(0x6B, 0x72, 0x80));
-            var inactiveBorder = new SolidColorBrush(Color.FromRgb(0xD1, 0xD5, 0xDB));
-            var activeBg = new SolidColorBrush(Color.FromRgb(0x1D, 0x4E, 0xD8));
-            var activeFg = Brushes.White;
-            var activeBorder = new SolidColorBrush(Color.FromRgb(0x1D, 0x4E, 0xD8));
-
-            foreach (var btn in new[] { Btn7, Btn14, Btn30 })
-            {
-                btn.Background = inactiveBg;
-                btn.Foreground = inactiveFg;
-                btn.BorderBrush = inactiveBorder;
-            }
-
-            var active = TrendDays switch { 7 => Btn7, 14 => Btn14, _ => Btn30 };
-            active.Background = activeBg;
-            active.Foreground = activeFg;
-            active.BorderBrush = activeBorder;
-        }
-
-        // ══════════════════════════════════════════════════════════════════
         //  DRAW CHART
         // ══════════════════════════════════════════════════════════════════
 
         private void DrawChart()
         {
             ChartCanvas.Children.Clear();
-
             var allData = TrendData;
 
-            // ── Tidak ada data ────────────────────────────────────────────
+            // ── 1. Validasi Data ────────────────────────────────────────────
             if (allData == null || allData.Count == 0)
             {
                 var tb = new TextBlock
@@ -131,49 +100,49 @@ namespace MonitoringApp.Controls
                 return;
             }
 
-            // ── Ambil N hari terakhir ─────────────────────────────────────
+            // ── 2. Persiapan Koordinat & Padding (DIBUAT LEBIH LEGA) ─────────
             int n = Math.Min(TrendDays, allData.Count);
             var data = allData.Skip(allData.Count - n).ToList();
 
             double W = ChartCanvas.ActualWidth;
             double H = ChartCanvas.ActualHeight;
-            if (W < 10 || H < 10) return;
+            if (W < 20 || H < 20) return;
 
-            // Padding: Left, Right, Top, Bottom
-            const double PL = 42, PR = 30, PT = 18, PB = 30;
+            // PL ditambah ke 65 agar tidak menempel angka Y-Axis
+            // PT ditambah ke 45 agar label % di puncak tidak terpotong
+            const double PL = 65, PR = 45, PT = 45, PB = 45;
             double chartW = W - PL - PR;
             double chartH = H - PT - PB;
 
-            // ── Grid lines horizontal + label Y ──────────────────────────
+            // ── 3. Grid Lines & Y Labels (Lebih Soft) ───────────────────────
             foreach (int pct in new[] { 0, 25, 50, 75, 100 })
             {
                 double y = PT + chartH * (1.0 - pct / 100.0);
 
-                var gridLine = new Line
+                ChartCanvas.Children.Add(new Line
                 {
                     X1 = PL,
                     Y1 = y,
                     X2 = W - PR,
                     Y2 = y,
-                    Stroke = new SolidColorBrush(Color.FromArgb(40, 0, 0, 0)),
-                    StrokeThickness = 0.5
-                };
-                ChartCanvas.Children.Add(gridLine);
+                    Stroke = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0)), // Grid lebih samar
+                    StrokeThickness = 0.8
+                });
 
                 var yLabel = new TextBlock
                 {
                     Text = pct + "%",
                     FontSize = 10,
-                    Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0x9A, 0x92)),
-                    Width = 36,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8)),
+                    Width = 40,
                     TextAlignment = TextAlignment.Right
                 };
-                Canvas.SetLeft(yLabel, 0);
+                Canvas.SetLeft(yLabel, 15);
                 Canvas.SetTop(yLabel, y - 7);
                 ChartCanvas.Children.Add(yLabel);
             }
 
-            // ── Target 80% dashed ─────────────────────────────────────────
+            // ── 4. Target Line 80% (Dashed) ──────────────────────────────────
             double y80 = PT + chartH * 0.20;
             ChartCanvas.Children.Add(new Line
             {
@@ -181,133 +150,145 @@ namespace MonitoringApp.Controls
                 Y1 = y80,
                 X2 = W - PR,
                 Y2 = y80,
-                Stroke = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32)),
-                StrokeThickness = 1.0,
-                StrokeDashArray = new DoubleCollection { 4, 3 },
-                Opacity = 0.65
+                Stroke = new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A)),
+                StrokeThickness = 1.2,
+                StrokeDashArray = new DoubleCollection { 6, 4 },
+                Opacity = 0.5
             });
-            var t80 = new TextBlock
-            {
-                Text = "80%",
-                FontSize = 9,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32))
-            };
-            Canvas.SetLeft(t80, W - PR + 3);
-            Canvas.SetTop(t80, y80 - 7);
-            ChartCanvas.Children.Add(t80);
 
-            // ── Hitung ukuran dan posisi bar ──────────────────────────────
+            // ── 5. Bar & Data Points Loop ────────────────────────────────────
             double step = n > 1 ? chartW / (n - 1) : 0;
-            double barW = Math.Max(8, Math.Min(26, (n > 1 ? step : chartW) * 0.52));
-
             var linePoints = new PointCollection();
+            double barW = 16; // Lebar tetap yang elegan
 
             for (int i = 0; i < data.Count; i++)
             {
                 var pt = data[i];
+                // Tambahkan CX dengan logic gap
                 double cx = n > 1 ? PL + i * step : PL + chartW / 2.0;
 
-                // Downtime shade (background bar)
+                // A. Background Shade (Full Rounded)
                 var shade = new Rectangle
                 {
                     Width = barW,
                     Height = chartH,
-                    RadiusX = 3,
-                    RadiusY = 3,
-                    Fill = new SolidColorBrush(Color.FromArgb(28, 0xE2, 0x4B, 0x4A))
+                    RadiusX = 8,
+                    RadiusY = 8,
+                    Fill = new SolidColorBrush(Color.FromArgb(12, 0, 0, 0))
                 };
                 ChartCanvas.Children.Add(shade);
                 Canvas.SetLeft(shade, cx - barW / 2);
                 Canvas.SetTop(shade, PT);
 
-                // Uptime bar — warna sesuai threshold
-                double upH = Math.Max(2, chartH * (pt.UptimePercent / 100.0));
-                Color barColor = pt.UptimePercent >= 80
-                    ? Color.FromRgb(0x63, 0x99, 0x22)
-                    : pt.UptimePercent >= 60
-                        ? Color.FromRgb(0xBA, 0x75, 0x17)
-                        : Color.FromRgb(0xE2, 0x4B, 0x4A);
+                // B. Uptime Bar (Modern Threshold Colors)
+                double upH = Math.Max(8, chartH * (pt.UptimePercent / 100.0));
+                Color barColor = pt.UptimePercent >= 80 ? Color.FromRgb(0x22, 0xC5, 0x5E) : // Hijau
+                                 pt.UptimePercent >= 60 ? Color.FromRgb(0xF5, 0x9E, 0x0B) : // Oranye
+                                                          Color.FromRgb(0xEF, 0x44, 0x44);   // Merah
 
                 var upBar = new Rectangle
                 {
                     Width = barW,
                     Height = upH,
-                    RadiusX = 3,
-                    RadiusY = 3,
+                    RadiusX = 8,
+                    RadiusY = 8,
                     Fill = new SolidColorBrush(barColor)
                 };
+
+                // Glow Effect pada Bar
+                upBar.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 10,
+                    ShadowDepth = 0,
+                    Opacity = 0.2,
+                    Color = barColor
+                };
+
                 ChartCanvas.Children.Add(upBar);
                 Canvas.SetLeft(upBar, cx - barW / 2);
                 Canvas.SetTop(upBar, PT + chartH - upH);
 
-                // Label % di atas bar (jika ada ruang)
-                if (upH < chartH - 14)
-                {
-                    var pctLbl = new TextBlock
-                    {
-                        Text = pt.UptimePercent + "%",
-                        FontSize = 8,
-                        FontWeight = FontWeights.SemiBold,
-                        Foreground = new SolidColorBrush(barColor),
-                        TextAlignment = TextAlignment.Center,
-                        Width = barW + 14
-                    };
-                    ChartCanvas.Children.Add(pctLbl);
-                    Canvas.SetLeft(pctLbl, cx - (barW + 14) / 2);
-                    Canvas.SetTop(pctLbl, PT + chartH - upH - 13);
-                }
-
-                // Titik untuk polyline
+                // C. Label Persentase (Posisikan Mengambang di atas Bar)
                 double py = PT + chartH * (1.0 - pt.UptimePercent / 100.0);
+                var pctLbl = new TextBlock
+                {
+                    Text = pt.UptimePercent + "%",
+                    FontSize = 10,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = new SolidColorBrush(barColor),
+                    TextAlignment = TextAlignment.Center,
+                    Width = 45
+                };
+                ChartCanvas.Children.Add(pctLbl);
+                Canvas.SetLeft(pctLbl, cx - 22.5);
+                Canvas.SetTop(pctLbl, py - 30); // Offset -30 agar tidak tabrakan dengan garis biru 
+
                 linePoints.Add(new Point(cx, py));
 
-                // Label X-axis
+                // D. Label X-Axis (Tanggal)
                 bool isLast = i == data.Count - 1;
                 var xLbl = new TextBlock
                 {
                     Text = pt.DateLabel,
-                    FontSize = 9,
-                    FontWeight = isLast ? FontWeights.Bold : FontWeights.Normal,
-                    Foreground = new SolidColorBrush(isLast
-                                       ? Color.FromRgb(0xE2, 0x4B, 0x4A)
-                                       : Color.FromRgb(0x9C, 0x9A, 0x92)),
+                    FontSize = 10,
+                    Foreground = new SolidColorBrush(isLast ? Color.FromRgb(0x1E, 0x40, 0xAF) : Color.FromRgb(0x64, 0x74, 0x8B)),
                     TextAlignment = TextAlignment.Center,
-                    Width = 36
+                    Width = 50,
+                    FontWeight = isLast ? FontWeights.Bold : FontWeights.Normal
                 };
                 ChartCanvas.Children.Add(xLbl);
-                Canvas.SetLeft(xLbl, cx - 18);
-                Canvas.SetTop(xLbl, PT + chartH + 5);
+                Canvas.SetLeft(xLbl, cx - 25);
+                Canvas.SetTop(xLbl, PT + chartH + 12);
             }
 
-            // ── Polyline tren ─────────────────────────────────────────────
+            // ── 6. Garis Tren Lengkung (Spline/Bezier) ───────────────────────
             if (linePoints.Count > 1)
             {
-                ChartCanvas.Children.Add(new Polyline
+                PathGeometry geometry = new PathGeometry();
+                PathFigure figure = new PathFigure { StartPoint = linePoints[0] };
+
+                for (int i = 1; i < linePoints.Count; i++)
                 {
-                    Points = linePoints,
-                    Stroke = new SolidColorBrush(Color.FromRgb(0x37, 0x8A, 0xDD)),
-                    StrokeThickness = 2.0,
+                    var p0 = linePoints[i - 1];
+                    var p1 = linePoints[i];
+                    double controlX = p0.X + (p1.X - p0.X) / 2;
+                    figure.Segments.Add(new BezierSegment(new Point(controlX, p0.Y), new Point(controlX, p1.Y), p1, true));
+                }
+
+                geometry.Figures.Add(figure);
+                Path smoothLine = new Path
+                {
+                    Data = geometry,
+                    Stroke = new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6)),
+                    StrokeThickness = 3.5,
                     StrokeLineJoin = PenLineJoin.Round,
                     StrokeStartLineCap = PenLineCap.Round,
                     StrokeEndLineCap = PenLineCap.Round
-                });
+                };
+
+                smoothLine.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 12,
+                    ShadowDepth = 4,
+                    Opacity = 0.25,
+                    Color = Colors.DeepSkyBlue
+                };
+                ChartCanvas.Children.Add(smoothLine);
             }
 
-            // ── Dots ─────────────────────────────────────────────────────
+            // ── 7. Titik Data (Dots) ──────────────────────────────────────────
             for (int i = 0; i < linePoints.Count; i++)
             {
                 bool isLast = i == linePoints.Count - 1;
                 var dot = new Ellipse
                 {
-                    Width = isLast ? 10 : 7,
-                    Height = isLast ? 10 : 7,
-                    Fill = new SolidColorBrush(isLast
-                                          ? Color.FromRgb(0x18, 0x5F, 0xA5)
-                                          : Color.FromRgb(0x37, 0x8A, 0xDD)),
-                    Stroke = Brushes.White,
-                    StrokeThickness = isLast ? 2 : 1.5
+                    Width = isLast ? 11 : 8,
+                    Height = isLast ? 11 : 8,
+                    Fill = isLast ? Brushes.White : new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6)),
+                    Stroke = new SolidColorBrush(Color.FromRgb(0x1E, 0x40, 0xAF)),
+                    StrokeThickness = 2
                 };
-                double r = isLast ? 5 : 3.5;
+                double r = dot.Width / 2;
                 ChartCanvas.Children.Add(dot);
                 Canvas.SetLeft(dot, linePoints[i].X - r);
                 Canvas.SetTop(dot, linePoints[i].Y - r);
@@ -344,6 +325,17 @@ namespace MonitoringApp.Controls
             TxtBestVal.Text = $"▲ Uptime {best.UptimePercent}%";
             TxtWorstDay.Text = worst.DateLabelFull;
             TxtWorstVal.Text = $"▼ Uptime {worst.UptimePercent}%";
+        }
+
+        private void CmbTrendDays_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (CmbTrendDays.SelectedItem is ComboBoxItem item && item.Tag != null)
+            {
+                if (int.TryParse(item.Tag.ToString(), out int days))
+                {
+                    TrendDays = days; // Ini akan memicu fungsi DrawChart() otomatis [cite: 9]
+                }
+            }
         }
     }
 }

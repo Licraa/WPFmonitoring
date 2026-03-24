@@ -11,7 +11,7 @@ namespace MonitoringApp.Data
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            var basePath = AppDomain.CurrentDomain.BaseDirectory;
+            var basePath = Directory.GetCurrentDirectory();
 
             // 2. BUILD CONFIGURATION
             var configuration = new ConfigurationBuilder()
@@ -35,16 +35,12 @@ namespace MonitoringApp.Data
 
             builder.UseSqlServer(connectionString, sqlOptions =>
             {
-                // [PENTING] EnableRetryOnFailure:
-                // Ini membuat EF Core otomatis mencoba connect ulang jika gagal karena 
-                // masalah jaringan sesaat (transient error) sebelum melempar error.
+              
                 sqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 5,             // Coba ulang maksimal 5 kali
                     maxRetryDelay: TimeSpan.FromSeconds(10), // Tunggu maksimal 10 detik antar percobaan
                     errorNumbersToAdd: null       // Gunakan list error default SQL Server
                 );
-
-                // Opsional: Set timeout command lebih panjang jika query berat
                 sqlOptions.CommandTimeout(30);
             });
 

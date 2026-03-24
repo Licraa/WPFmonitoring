@@ -1,3 +1,4 @@
+﻿using DocumentFormat.OpenXml.InkML;
 using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Data;
 using MonitoringApp.Models;
@@ -74,17 +75,17 @@ namespace MonitoringApp.Services
 
                 var machineIds = machines.Select(m => m.Id).ToList();
 
-                // Ambil Data Shift secara Bulk dengan Context baru
-                var shift1Dict = context.Shift1s.AsNoTracking()
-                    .Where(x => machineIds.Contains(x.Id))
+                // 🌟 AMBIL DATA SHIFT DARI TABEL BARU SECARA BULK
+                var shift1Dict = context.MachineShiftDatas.AsNoTracking()
+                    .Where(x => machineIds.Contains(x.Id) && x.ShiftNumber == 1) // Cek ID dan Syarat Shift 1
                     .ToDictionary(k => k.Id, v => v);
 
-                var shift2Dict = context.Shift2s.AsNoTracking()
-                    .Where(x => machineIds.Contains(x.Id))
+                var shift2Dict = context.MachineShiftDatas.AsNoTracking()
+                    .Where(x => machineIds.Contains(x.Id) && x.ShiftNumber == 2) // Cek ID dan Syarat Shift 2
                     .ToDictionary(k => k.Id, v => v);
 
-                var shift3Dict = context.Shift3s.AsNoTracking()
-                    .Where(x => machineIds.Contains(x.Id))
+                var shift3Dict = context.MachineShiftDatas.AsNoTracking()
+                    .Where(x => machineIds.Contains(x.Id) && x.ShiftNumber == 3) // Cek ID dan Syarat Shift 3
                     .ToDictionary(k => k.Id, v => v);
 
                 var result = new List<MachineDetailViewModel>();
@@ -139,6 +140,30 @@ namespace MonitoringApp.Services
                 DowntimePercent = data.P_DataCh1,
                 UptimePercent = data.P_Uptime
             };
+        }
+
+        // Nama dipersingkat menjadi GetDailyTrend
+        // ?? Tambahkan parameter shiftName dengan nilai default "ALL DAY"
+        public List<DailyUptimePoint> GetDailyTrend(int machineId, string shiftName = "ALL DAY")
+        {
+            var trendPoints = new List<DailyUptimePoint>();
+
+            using (var context = _contextFactory.CreateDbContext())
+            {
+                var dataDb = context.DailyUptimeLogs
+                    // ?? PERBAIKAN: Gunakan parameter shiftName, bukan teks "ALL DAY"
+                    .Where(x => x.MachineId == machineId && x.ShiftName == shiftName)
+                    .OrderByDescending(x => x.LogDate)
+                    .Take(30)
+                    .OrderBy(x => x.LogDate)
+                    .ToList();
+
+                foreach (var dbItem in dataDb)
+                {
+                    trendPoints.Add(new DailyUptimePoint { Date = dbItem.LogDate, UptimePercent = dbItem.UptimePct, Count = dbItem.TotalCount });
+                }
+            }
+            return trendPoints;
         }
     }
 }

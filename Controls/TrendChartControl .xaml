@@ -42,77 +42,79 @@
         </Grid.RowDefinitions>
 
         <!-- ROW 0: STAT CARDS + PAGINATION -->
-        <Grid Grid.Row="0" Margin="0,0,0,10">
+        <Grid Grid.Row="0" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <UniformGrid Grid.Column="0" Columns="4" Margin="0,0,12,0">
-                <Border Background="#F0FDF4" CornerRadius="8" Padding="10,8" Margin="0,0,6,0"
-                        BorderBrush="#BBF7D0" BorderThickness="1">
+            <UniformGrid Grid.Column="0" Columns="4" Margin="0,0,20,0">
+                <Border Background="#F0FDF4" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#BBF7D0" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Rata-rata Uptime" FontSize="10" Foreground="#6B7280"/>
-                        <TextBlock x:Name="TxtAvgUp" Text="—" FontSize="22" FontWeight="Bold" Foreground="#2E7D32" Margin="0,2,0,0"/>
-                        <TextBlock x:Name="TxtAvgUpSub" Text="" FontSize="10" Foreground="#6B7280"/>
+                        <TextBlock Text="Rata-rata Uptime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <TextBlock x:Name="TxtAvgUp" Text="74%" FontSize="24" FontWeight="Bold" Foreground="#166534"/>
+                            <TextBlock x:Name="TxtAvgUpSub" Text=" (7 hari)" FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
-                <Border Background="#FFF1F2" CornerRadius="8" Padding="10,8" Margin="0,0,6,0"
-                        BorderBrush="#FECDD3" BorderThickness="1">
+
+                <Border Background="#FFF1F2" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#FECDD3" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Rata-rata Downtime" FontSize="10" Foreground="#6B7280"/>
-                        <TextBlock x:Name="TxtAvgDown" Text="—" FontSize="22" FontWeight="Bold" Foreground="#B91C1C" Margin="0,2,0,0"/>
-                        <TextBlock x:Name="TxtAvgDownSub" Text="" FontSize="10" Foreground="#6B7280"/>
+                        <TextBlock Text="Rata-rata Downtime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <TextBlock x:Name="TxtAvgDown" Text="26%" FontSize="24" FontWeight="Bold" Foreground="#991B1B"/>
+                            <TextBlock x:Name="TxtAvgDownSub" Text=" (7 hari)" FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
-                <Border Background="#F0FDF4" CornerRadius="8" Padding="10,8" Margin="0,0,6,0"
-                        BorderBrush="#BBF7D0" BorderThickness="1">
+
+                <Border Background="#F0FDF4" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#BBF7D0" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Hari Terbaik" FontSize="10" Foreground="#6B7280"/>
-                        <TextBlock x:Name="TxtBestDay" Text="—" FontSize="13" FontWeight="Bold" Foreground="#1A1A2E" Margin="0,3,0,0"/>
-                        <TextBlock x:Name="TxtBestVal" Text="" FontSize="10" Foreground="#2E7D32"/>
+                        <TextBlock Text="Hari Terbaik" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="TxtBestDay" Text="Fri 20/03" FontSize="14" FontWeight="Bold" Foreground="#1A1A2E"/>
+                        <TextBlock x:Name="TxtBestVal" Text="▲ Uptime 90%" FontSize="10" Foreground="#166534" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
-                <Border Background="#FFF1F2" CornerRadius="8" Padding="10,8"
-                        BorderBrush="#FECDD3" BorderThickness="1">
+
+                <Border Background="#FFF1F2" CornerRadius="10" Padding="12,10" BorderBrush="#FECDD3" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Hari Terburuk" FontSize="10" Foreground="#6B7280"/>
-                        <TextBlock x:Name="TxtWorstDay" Text="—" FontSize="13" FontWeight="Bold" Foreground="#1A1A2E" Margin="0,3,0,0"/>
-                        <TextBlock x:Name="TxtWorstVal" Text="" FontSize="10" Foreground="#B91C1C"/>
+                        <TextBlock Text="Hari Terburuk" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="TxtWorstDay" Text="Sun 22/03" FontSize="14" FontWeight="Bold" Foreground="#1A1A2E"/>
+                        <TextBlock x:Name="TxtWorstVal" Text="▼ Uptime 45%" FontSize="10" Foreground="#991B1B" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
             </UniformGrid>
 
-            <!-- Pagination buttons 7H / 14H / 30H -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button x:Name="Btn7"  Content="7H"  Click="Btn7_Click"
-                        Background="#1D4ED8" Foreground="White" BorderBrush="#1D4ED8"
-                        Style="{StaticResource PillButton}"/>
-                <Button x:Name="Btn14" Content="14H" Click="Btn14_Click"
-                        Background="#F3F4F6" Foreground="#6B7280" BorderBrush="#D1D5DB"
-                        Style="{StaticResource PillButton}"/>
-                <Button x:Name="Btn30" Content="30H" Click="Btn30_Click"
-                        Background="#F3F4F6" Foreground="#6B7280" BorderBrush="#D1D5DB"
-                        Style="{StaticResource PillButton}"/>
+                <StackPanel Margin="0,0,12,0">
+                    <TextBlock Text="Pilih Shift" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
+                    <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="2">
+                        <ComboBox Width="110" Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalContentAlignment="Center"
+                          SelectedValue="{Binding SelectedTrendShift}" SelectedValuePath="Content">
+                            <ComboBoxItem Content="ALL DAY" IsSelected="True"/>
+                            <ComboBoxItem Content="Shift 1"/>
+                            <ComboBoxItem Content="Shift 2"/>
+                            <ComboBoxItem Content="Shift 3"/>
+                        </ComboBox>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel>
+                    <TextBlock Text="Durasi" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
+                    <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="2">
+                        <ComboBox x:Name="CmbTrendDays" Width="95" Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalContentAlignment="Center"
+                          SelectionChanged="CmbTrendDays_SelectionChanged">
+                            <ComboBoxItem Content="7 Hari" Tag="7" IsSelected="True"/>
+                            <ComboBoxItem Content="14 Hari" Tag="14"/>
+                            <ComboBoxItem Content="30 Hari" Tag="30"/>
+                        </ComboBox>
+                    </Border>
+                </StackPanel>
             </StackPanel>
         </Grid>
 
         <!-- ROW 1: CANVAS CHART -->
         <Canvas x:Name="ChartCanvas" Grid.Row="1" ClipToBounds="True" Background="Transparent"/>
-
-        <!-- ROW 2: LEGEND -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-            <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2" Fill="#639922" Margin="0,0,4,0" VerticalAlignment="Center"/>
-            <TextBlock Text="Uptime &#x2265;80%" FontSize="10" Foreground="#6B7280" Margin="0,0,14,0"/>
-            <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2" Fill="#BA7517" Margin="0,0,4,0" VerticalAlignment="Center"/>
-            <TextBlock Text="60&#x2013;79%" FontSize="10" Foreground="#6B7280" Margin="0,0,14,0"/>
-            <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2" Fill="#E24B4A" Margin="0,0,4,0" VerticalAlignment="Center"/>
-            <TextBlock Text="&lt;60%" FontSize="10" Foreground="#6B7280" Margin="0,0,14,0"/>
-            <Ellipse Width="10" Height="10" Fill="#378ADD" Margin="0,0,4,0" VerticalAlignment="Center"/>
-            <TextBlock Text="Tren Uptime" FontSize="10" Foreground="#6B7280" Margin="0,0,14,0"/>
-            <Rectangle Width="14" Height="2" Fill="#2E7D32" Margin="0,0,4,0" VerticalAlignment="Center" Opacity="0.7"/>
-            <TextBlock Text="Target 80%" FontSize="10" Foreground="#2E7D32"/>
-        </StackPanel>
-
     </Grid>
 </UserControl>

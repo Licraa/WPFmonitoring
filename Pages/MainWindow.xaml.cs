@@ -111,6 +111,8 @@ namespace MonitoringApp.Pages
                         // FIX: Update Properti Cycle & Persentase
                         existingItem.Cycle = newItem.Cycle;
                         existingItem.AvgCycle = newItem.AvgCycle;
+
+
               
                     }
                     else
@@ -167,6 +169,16 @@ namespace MonitoringApp.Pages
                         UpdateShiftData(existingItem.Shift1, newItem.Shift1);
                         UpdateShiftData(existingItem.Shift2, newItem.Shift2);
                         UpdateShiftData(existingItem.Shift3, newItem.Shift3);
+
+                        if (existingItem.TrendData.Count == 0)
+                        {
+                            // 👇 Sisipkan 'existingItem.SelectedTrendShift' sebagai pesanannya
+                            var trendList = scopedSummaryService.GetDailyTrend(existingItem.Id, existingItem.SelectedTrendShift);
+                            foreach (var pt in trendList)
+                            {
+                                existingItem.TrendData.Add(pt);
+                            }
+                        }
 
                         if (isChanged) existingItem.TriggerFlash();
                     }

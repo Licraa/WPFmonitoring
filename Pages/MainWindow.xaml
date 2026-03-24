@@ -561,7 +561,7 @@
                                         </Grid.Style>
 
                                         <Border Width="1200" HorizontalAlignment="Left" Background="White"
-        CornerRadius="15" BorderBrush="#CCCCCC" BorderThickness="1" Padding="30">
+                                            CornerRadius="15" BorderBrush="#CCCCCC" BorderThickness="1" Padding="30">
                                             <Grid>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
@@ -570,9 +570,7 @@
                                                     <!-- Content: Shift Chart ATAU Trend Chart -->
                                                 </Grid.RowDefinitions>
 
-                                                <!-- ═══════════════════════════════════════════════
-             ROW 0 — HEADER: Nama Mesin + Legend + Tab
-        ═══════════════════════════════════════════════ -->
+                                                <!-- ══════════════════════════════════════════════ ROW 0 — HEADER: Nama Mesin + Legend + Tab ═══════════════════════════════════════════════ -->
                                                 <Grid Grid.Row="0">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
@@ -587,14 +585,14 @@
 
                                                     <!-- Nama Mesin + Line (tengah) -->
                                                     <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                        HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Name}"
-                           FontWeight="Bold" FontSize="30"
-                           Foreground="#1A1A2E" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Line, StringFormat='LINE : {0}'}"
-                           FontWeight="SemiBold" FontSize="14"
-                           Foreground="#6B7280" HorizontalAlignment="Center"
-                           Margin="0,4,0,0"/>
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                                        <TextBlock Text="{Binding Name}"
+                                                           FontWeight="Bold" FontSize="30"
+                                                           Foreground="#1A1A2E" HorizontalAlignment="Center"/>
+                                                                                        <TextBlock Text="{Binding Line, StringFormat='LINE : {0}'}"
+                                                           FontWeight="SemiBold" FontSize="14"
+                                                           Foreground="#6B7280" HorizontalAlignment="Center"
+                                                           Margin="0,4,0,0"/>
                                                     </StackPanel>
 
                                                     <!-- Legend Uptime/Downtime (kanan atas) -->

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MonitoringApp.Data;
 
@@ -11,9 +12,11 @@ using MonitoringApp.Data;
 namespace MonitoringApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260324030138_UpdateDailyLog")]
+    partial class UpdateDailyLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -153,51 +156,6 @@ namespace MonitoringApp.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("line", (string)null);
-                });
-
-            modelBuilder.Entity("MonitoringApp.Models.MachineShiftData", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<int>("ShiftNumber")
-                        .HasColumnType("int")
-                        .HasColumnName("shift_number");
-
-                    b.Property<TimeSpan>("DataCh1")
-                        .HasColumnType("time");
-
-                    b.Property<float>("DurasiTerakhirA4")
-                        .HasColumnType("real");
-
-                    b.Property<DateTime>("Last_Update")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("NilaiA0")
-                        .HasColumnType("int");
-
-                    b.Property<int>("NilaiTerakhirA2")
-                        .HasColumnType("int");
-
-                    b.Property<int>("P_DataCh1")
-                        .HasColumnType("int");
-
-                    b.Property<int>("P_Uptime")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PartHours")
-                        .HasColumnType("int");
-
-                    b.Property<float>("RataRataTerakhirA4")
-                        .HasColumnType("real");
-
-                    b.Property<TimeSpan>("Uptime")
-                        .HasColumnType("time");
-
-                    b.HasKey("Id", "ShiftNumber");
-
-                    b.ToTable("machine_shift_data", (string)null);
                 });
 
             modelBuilder.Entity("MonitoringApp.Models.Shift1", b =>

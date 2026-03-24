@@ -9,13 +9,11 @@ namespace MonitoringApp.Models
     {
         [Key]
         public int Id { get; set; } // Kita matikan Auto Increment karena ID ikut tabel Line
-
         public int NilaiA0 { get; set; }
         public int NilaiTerakhirA2 { get; set; }
         public float DurasiTerakhirA4 { get; set; }
         public float RataRataTerakhirA4 { get; set; }
         public int PartHours { get; set; }
-
         public TimeSpan DataCh1 { get; set; } // Downtime
         public TimeSpan Uptime { get; set; }  // Uptime
 

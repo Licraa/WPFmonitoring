@@ -26,6 +26,8 @@ namespace MonitoringApp.Data
         public virtual DbSet<Shift1> Shift1s { get; set; }
         public virtual DbSet<Shift2> Shift2s { get; set; }
         public virtual DbSet<Shift3> Shift3s { get; set; }
+        public virtual DbSet<MachineShiftData> MachineShiftDatas { get; set; }
+        public virtual DbSet<DailyUptimeLog> DailyUptimeLogs { get; set; }
 
         // --- 2. KONFIGURASI KONEKSI ---
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -106,6 +108,30 @@ namespace MonitoringApp.Data
                 .WithOne()
                 .HasForeignKey<Shift3>(e => e.Id)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DailyUptimeLog>()
+                .HasOne(d => d.Line)             // Log ini punya 1 Line induk
+                .WithMany()                      // Tapi Line induk bisa punya Banyak Log
+                .HasForeignKey(d => d.MachineId) // Yang jadi pengikatnya adalah MachineId
+                .OnDelete(DeleteBehavior.Cascade); // Jika Line dihapus, hapus juga semua log-nya!s
+
+            modelBuilder.Entity<MachineShiftData>(entity =>
+            {
+                // Nama tabelnya
+                entity.ToTable("machine_shift_data");
+
+                // Kunci gabungan
+                entity.HasKey(e => new { e.Id, e.ShiftNumber });
+
+                // 🌟 INI OBATNYA: Matikan Auto-Increment secara paksa!
+                entity.Property(e => e.Id)
+                      .HasColumnName("id")
+                      .ValueGeneratedNever();
+
+                entity.Property(e => e.ShiftNumber).HasColumnName("shift_number");
+
+                // (Bawahnya biarkan sama seperti yang Mas Raja tulis sebelumnya)
+            });
         }
 
         // --- HELPER CANGGIH ---
@@ -145,5 +171,6 @@ namespace MonitoringApp.Data
                     .HasDefaultValueSql("(getdate())");
             });
         }
+
     }
 }
