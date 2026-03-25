@@ -92,8 +92,7 @@
                     <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="2">
                         <ComboBox Width="110" Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalContentAlignment="Center"
                           SelectedValue="{Binding SelectedTrendShift}" SelectedValuePath="Content">
-                            <ComboBoxItem Content="ALL DAY" IsSelected="True"/>
-                            <ComboBoxItem Content="Shift 1"/>
+                            <ComboBoxItem Content="Shift 1" IsSelected="True"/>
                             <ComboBoxItem Content="Shift 2"/>
                             <ComboBoxItem Content="Shift 3"/>
                         </ComboBox>

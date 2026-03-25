@@ -64,8 +64,7 @@ namespace MonitoringApp.ViewModels
             }
         }
 
-        // ?? Pastikan teks awalnya adalah "ALL DAY" (Sama persis huruf besarnya dengan di Database dan XAML)
-        private string _selectedTrendShift = "ALL DAY";
+        private string _selectedTrendShift = "Shift 1";
 
         public string SelectedTrendShift
         {
@@ -76,7 +75,7 @@ namespace MonitoringApp.ViewModels
                 {
                     _selectedTrendShift = value;
                     OnPropertyChanged();
-                    TrendData.Clear(); // Kosongkan piring agar memicu Timer memanggil Koki
+                    TrendData.Clear();
                 }
             }
         }

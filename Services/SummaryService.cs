@@ -144,7 +144,7 @@ namespace MonitoringApp.Services
 
         // Nama dipersingkat menjadi GetDailyTrend
         // ?? Tambahkan parameter shiftName dengan nilai default "ALL DAY"
-        public List<DailyUptimePoint> GetDailyTrend(int machineId, string shiftName = "ALL DAY")
+        public List<DailyUptimePoint> GetDailyTrend(int machineId, string shiftName = "Shift 1")
         {
             var trendPoints = new List<DailyUptimePoint>();
 

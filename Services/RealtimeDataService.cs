@@ -122,7 +122,7 @@ namespace MonitoringApp.Services
                     CalculateShiftPercentAndSave(context, machine.Id, "Shift 3", summaryDate, s3);
 
                     // 2. PROCESS ALL DAY
-                    CalculateDailyTotalAndSave(context, machine.Id, summaryDate, s1, s2, s3);
+                    //CalculateDailyTotalAndSave(context, machine.Id, summaryDate, s1, s2, s3);
                 }
 
                 // Simpan semua perubahan sekaligus ke Database
