@@ -181,7 +181,6 @@
                                     <PasswordBox x:Name="txtPassword" Grid.Column="1" Style="{StaticResource CleanPasswordBox}"/>
                                 </Grid>
                             </Border>
-
                             <Button Content="Login" Margin="0,10,0,0" Style="{StaticResource GradientButton}" Click="Login_Click"/>
 
                         </StackPanel>

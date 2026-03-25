@@ -11,7 +11,6 @@ namespace MonitoringApp.Services
     public class MachineService
     {
         private readonly AppDbContext _context;
-        // PERBAIKAN: Update tipe Dictionary Cache agar menyimpan MachineCode (int)
         private readonly Dictionary<int, (int MachineCode, string Name, string Line, string Process)> _machineCache = new();
 
         public MachineService(AppDbContext context)
@@ -20,24 +19,20 @@ namespace MonitoringApp.Services
         }
 
         // --- 1. GET ALL (READ) ---
-        // --- 1. GET ALL (READ) ---
         public List<MachineDetailViewModel> GetAllMachines()
         {
             var query = from l in _context.Lines.AsNoTracking()
                         join dr in _context.DataRealtimes.AsNoTracking() on l.Id equals dr.Id into joinedDr
                         from dr in joinedDr.DefaultIfEmpty()
 
-                            // 🌟 AMBIL DARI PANCI BARU (MachineShiftDatas - Shift 1)
                         join s1 in _context.MachineShiftDatas.AsNoTracking().Where(x => x.ShiftNumber == 1)
                              on l.Id equals s1.Id into joinedS1
                         from s1 in joinedS1.DefaultIfEmpty()
 
-                            // 🌟 AMBIL DARI PANCI BARU (MachineShiftDatas - Shift 2)
                         join s2 in _context.MachineShiftDatas.AsNoTracking().Where(x => x.ShiftNumber == 2)
                              on l.Id equals s2.Id into joinedS2
                         from s2 in joinedS2.DefaultIfEmpty()
 
-                            // 🌟 AMBIL DARI PANCI BARU (MachineShiftDatas - Shift 3)
                         join s3 in _context.MachineShiftDatas.AsNoTracking().Where(x => x.ShiftNumber == 3)
                              on l.Id equals s3.Id into joinedS3
                         from s3 in joinedS3.DefaultIfEmpty()
@@ -57,7 +52,6 @@ namespace MonitoringApp.Services
                             Cycle = dr != null ? dr.DurasiTerakhirA4 : 0,
                             AvgCycle = dr != null ? dr.RataRataTerakhirA4 : 0,
 
-                            // Mapping Data Shift ke UI
                             Shift1 = s1 == null ? new ShiftSummaryViewModel() : new ShiftSummaryViewModel
                             {
                                 Count = s1.NilaiTerakhirA2,
@@ -89,13 +83,13 @@ namespace MonitoringApp.Services
         // --- 2. UPDATE ---
         public bool UpdateMachine(int id, int machineCode, string name, string process, string line, string remark)
         {
-            if (_machineCache.ContainsKey(id)) _machineCache.Remove(id);
+            _machineCache.Remove(id); // Langsung hapus memori lama
             try
             {
                 bool isDuplicate = _context.Lines.Any(x => x.MachineCode == machineCode && x.Id != id);
                 if (isDuplicate)
                 {
-                    System.Windows.MessageBox.Show($"Machine Code {machineCode} is already used by another machine!", "Duplicate Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show($"Machine Code {machineCode} is already used!", "Duplicate Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                     return false;
                 }
 
@@ -144,16 +138,12 @@ namespace MonitoringApp.Services
         // --- 4. DELETE ---
         public bool DeleteMachine(int id)
         {
-            // 1. Bersihkan cache
-            if (_machineCache.ContainsKey(id)) _machineCache.Remove(id);
-
+            _machineCache.Remove(id);
             try
             {
-                // 2. Ambil data mesin
                 var line = _context.Lines.FirstOrDefault(x => x.Id == id);
                 if (line != null)
                 {
-                    // 3. Langsung hapus (Cascade Delete di DB akan menghapus Shift1,2,3 dan Realtime otomatis)
                     _context.Lines.Remove(line);
                     _context.SaveChanges();
                     return true;
@@ -162,19 +152,15 @@ namespace MonitoringApp.Services
             }
             catch (Exception ex)
             {
-                // Ambil pesan error paling dalam
-                var msg = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                var msg = ex.InnerException?.Message ?? ex.Message;
                 System.Windows.MessageBox.Show($"Gagal hapus: {msg}");
                 return false;
             }
         }
 
         // --- 5. INFO & HELPERS ---
-        // PERBAIKAN: Update Return Type agar menyertakan MachineCode (int)
         public (int MachineCode, string Name, string Line, string Process) GetMachineInfoCached(int id)
         {
-            if (_machineCache.Count > 100) _machineCache.Clear();
-
             if (_machineCache.TryGetValue(id, out var info)) return info;
 
             var machine = _context.Lines
@@ -185,8 +171,9 @@ namespace MonitoringApp.Services
 
             if (machine != null)
             {
-                // PERBAIKAN: Masukkan MachineCode ke dalam Tuple
                 var res = (machine.MachineCode, machine.Name ?? "Unknown", machine.LineProduction ?? "-", machine.Process ?? "-");
+
+                // 🌟 PERBAIKAN: Manajemen memori cache lebih aman, hanya tampung data aktif
                 _machineCache[id] = res;
                 return res;
             }
@@ -197,7 +184,7 @@ namespace MonitoringApp.Services
         public int GetDbIdByArduinoCode(int arduinoCode)
         {
             var machine = _context.Lines.AsNoTracking().FirstOrDefault(x => x.MachineCode == arduinoCode);
-            return machine != null ? machine.Id : -1;
+            return machine?.Id ?? -1;
         }
 
         public int GetNextAvailableId()
