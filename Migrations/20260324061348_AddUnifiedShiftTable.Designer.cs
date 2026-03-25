@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MonitoringApp.Data;
 
@@ -11,9 +12,11 @@ using MonitoringApp.Data;
 namespace MonitoringApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260324061348_AddUnifiedShiftTable")]
+    partial class AddUnifiedShiftTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -158,12 +161,10 @@ namespace MonitoringApp.Migrations
             modelBuilder.Entity("MonitoringApp.Models.MachineShiftData", b =>
                 {
                     b.Property<int>("Id")
-                        .HasColumnType("int")
-                        .HasColumnName("id");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
 
-                    b.Property<int>("ShiftNumber")
-                        .HasColumnType("int")
-                        .HasColumnName("shift_number");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<TimeSpan>("DataCh1")
                         .HasColumnType("time");
@@ -192,12 +193,15 @@ namespace MonitoringApp.Migrations
                     b.Property<float>("RataRataTerakhirA4")
                         .HasColumnType("real");
 
+                    b.Property<int>("ShiftNumber")
+                        .HasColumnType("int");
+
                     b.Property<TimeSpan>("Uptime")
                         .HasColumnType("time");
 
-                    b.HasKey("Id", "ShiftNumber");
+                    b.HasKey("Id");
 
-                    b.ToTable("machine_shift_data", (string)null);
+                    b.ToTable("MachineShiftDatas");
                 });
 
             modelBuilder.Entity("MonitoringApp.Models.Shift1", b =>

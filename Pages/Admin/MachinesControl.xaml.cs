@@ -14,7 +14,8 @@ namespace MonitoringApp.Pages
         private readonly MachineService _service;
 
         // Cache data
-        private List<MachineDetailViewModel> _allDataCache;
+        private List<MachineDetailViewModel> _allDataCache = new();
+
 
         public MachinesControl()
         {
@@ -23,8 +24,11 @@ namespace MonitoringApp.Pages
 
             _service = App.ServiceProvider.GetRequiredService<MachineService>();
 
-            _allDataCache = new List<MachineDetailViewModel>();
-
+            this.Unloaded += (s, e) => {
+                _allDataCache?.Clear(); // Kosongkan list cache saat pindah halaman
+                ListLines.ItemsSource = null;
+                ListMachines.ItemsSource = null;
+            };
             LoadData();
         }
 

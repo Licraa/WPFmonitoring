@@ -8,6 +8,7 @@ namespace MonitoringApp.Services
     public class DataProcessingService
     {
         private readonly Dictionary<int, object[]> _localCache = new();
+        private const int MAX_CACHE_SIZE = 100;
 
         public struct ProcessedResult
         {
@@ -23,6 +24,11 @@ namespace MonitoringApp.Services
             var result = new ProcessedResult { IsValid = false, IsDuplicate = false };
 
             if (string.IsNullOrWhiteSpace(rawLine)) return result;
+
+            if (_localCache.Count > MAX_CACHE_SIZE)
+            {
+                _localCache.Clear();
+            }
 
             try
             {

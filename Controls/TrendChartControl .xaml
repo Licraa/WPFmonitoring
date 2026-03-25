@@ -1,0 +1,119 @@
+﻿<UserControl x:Class="MonitoringApp.Controls.TrendChartControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="380" d:DesignWidth="1100">
+
+    <UserControl.Resources>
+        <Style x:Key="PillButton" TargetType="Button">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="14"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="220"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ROW 0: STAT CARDS + PAGINATION -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <UniformGrid Grid.Column="0" Columns="4" Margin="0,0,20,0">
+                <Border Background="#F0FDF4" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#BBF7D0" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Rata-rata Uptime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <TextBlock x:Name="TxtAvgUp" Text="74%" FontSize="24" FontWeight="Bold" Foreground="#166534"/>
+                            <TextBlock x:Name="TxtAvgUpSub" Text=" (7 hari)" FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFF1F2" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#FECDD3" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Rata-rata Downtime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <TextBlock x:Name="TxtAvgDown" Text="26%" FontSize="24" FontWeight="Bold" Foreground="#991B1B"/>
+                            <TextBlock x:Name="TxtAvgDownSub" Text=" (7 hari)" FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#F0FDF4" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#BBF7D0" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Hari Terbaik" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="TxtBestDay" Text="Fri 20/03" FontSize="14" FontWeight="Bold" Foreground="#1A1A2E"/>
+                        <TextBlock x:Name="TxtBestVal" Text="▲ Uptime 90%" FontSize="10" Foreground="#166534" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFF1F2" CornerRadius="10" Padding="12,10" BorderBrush="#FECDD3" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Hari Terburuk" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="TxtWorstDay" Text="Sun 22/03" FontSize="14" FontWeight="Bold" Foreground="#1A1A2E"/>
+                        <TextBlock x:Name="TxtWorstVal" Text="▼ Uptime 45%" FontSize="10" Foreground="#991B1B" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Margin="0,0,12,0">
+                    <TextBlock Text="Pilih Shift" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
+                    <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="2">
+                        <ComboBox Width="110" Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalContentAlignment="Center"
+                          SelectedValue="{Binding SelectedTrendShift}" SelectedValuePath="Content">
+                            <ComboBoxItem Content="Shift 1" IsSelected="True"/>
+                            <ComboBoxItem Content="Shift 2"/>
+                            <ComboBoxItem Content="Shift 3"/>
+                        </ComboBox>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel>
+                    <TextBlock Text="Durasi" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
+                    <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="2">
+                        <ComboBox x:Name="CmbTrendDays" Width="95" Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalContentAlignment="Center"
+                          SelectionChanged="CmbTrendDays_SelectionChanged">
+                            <ComboBoxItem Content="7 Hari" Tag="7" IsSelected="True"/>
+                            <ComboBoxItem Content="14 Hari" Tag="14"/>
+                            <ComboBoxItem Content="30 Hari" Tag="30"/>
+                        </ComboBox>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- ROW 1: CANVAS CHART -->
+        <Canvas x:Name="ChartCanvas" Grid.Row="1" ClipToBounds="True" Background="Transparent"/>
+    </Grid>
+</UserControl>

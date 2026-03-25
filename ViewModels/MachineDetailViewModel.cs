@@ -1,21 +1,19 @@
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks; // [Wajib ada untuk Task.Delay]
+using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace MonitoringApp.ViewModels
 {
-    // Pastikan ViewModelBase sudah mengimplementasikan INotifyPropertyChanged
     public class MachineDetailViewModel : ViewModelBase
     {
-        // Data Statis (Jarang berubah) - Pakai auto-property tidak apa-apa
         public int Id { get; set; }
         public int MachineCode { get; set; }
         public string Line { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Process { get; set; } = string.Empty;
-
-        // Data Dinamis (Sering berubah) - Pakai Backing Field + OnPropertyChanged
         private string _remark = string.Empty;
         public string Remark
         {
@@ -51,7 +49,6 @@ namespace MonitoringApp.ViewModels
             set { if (_avgCycle != value) { _avgCycle = value; OnPropertyChanged(); } }
         }
 
-        // --- SPECIAL CASE: NilaiA0 mempengaruhi Status ---
         private int _nilaiA0;
         public int NilaiA0
         {
@@ -61,15 +58,68 @@ namespace MonitoringApp.ViewModels
                 if (_nilaiA0 != value)
                 {
                     _nilaiA0 = value;
-                    OnPropertyChanged();           // Update nilai integer
-                    OnPropertyChanged(nameof(Status)); // Update string "Active"/"Inactive"
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(Status));
                 }
             }
         }
 
-        public string Status => NilaiA0 == 1 ? "Active" : "Inactive";
+        private string _selectedTrendShift = "Shift 1";
 
-        // Objek Shift (Nested ViewModels)
+        public string SelectedTrendShift
+        {
+            get => _selectedTrendShift;
+            set
+            {
+                if (_selectedTrendShift != value)
+                {
+                    _selectedTrendShift = value;
+                    OnPropertyChanged();
+                    TrendData.Clear();
+                }
+            }
+        }
+
+
+        public string Status => NilaiA0 == 1 ? "Active" : "Inactive";
+        private bool _isExpanded;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded != value)
+                {
+                    _isExpanded = value;
+                    OnPropertyChanged();
+                    if (!value) ShowTrend = false;
+                }
+            }
+        }
+        private bool _showTrend = false;
+        public bool ShowTrend
+        {
+            get => _showTrend;
+            set
+            {
+                if (_showTrend != value)
+                {
+                    _showTrend = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ShowShift));
+                }
+            }
+        }
+        public bool ShowShift => !_showTrend;
+        public ICommand ShowShiftCommand { get; }
+        public ICommand ShowTrendCommand { get; }
+
+        private ObservableCollection<DailyUptimePoint> _trendData = new();
+        public ObservableCollection<DailyUptimePoint> TrendData
+        {
+            get => _trendData;
+            set { _trendData = value; OnPropertyChanged(); }
+        }
         private ShiftSummaryViewModel _shift1 = new();
         public ShiftSummaryViewModel Shift1
         {
@@ -90,54 +140,33 @@ namespace MonitoringApp.ViewModels
             get => _shift3;
             set { _shift3 = value; OnPropertyChanged(); }
         }
-
-        // --- LOGIKA FLASH / BLINK ---
         private bool _isJustUpdated;
         public bool IsJustUpdated
         {
             get => _isJustUpdated;
-            set
-            {
-                // Kita tidak perlu cek if (_isJustUpdated != value) disini
-                // Agar animasi bisa dipicu berulang kali meskipun nilainya diset true lagi
-                _isJustUpdated = value;
-                OnPropertyChanged();
-            }
+            set { _isJustUpdated = value; OnPropertyChanged(); }
         }
 
         public async void TriggerFlash()
         {
-            IsJustUpdated = true;       // Nyalakan Overlay Kuning
-            await Task.Delay(500);      // Tunggu 500ms (Sama seperti JS setTimeout)
-            IsJustUpdated = false;      // Matikan Overlay
+            IsJustUpdated = true;
+            await Task.Delay(500);
+            IsJustUpdated = false;
         }
 
         public bool IsDifferentFrom(MachineDetailViewModel newData)
         {
             if (newData == null) return false;
-
-            // --- LOGIKA ALA JAVASCRIPT ---
-            // Karena di SummaryService kita sudah pakai format ".fff" (milidetik),
-            // String LastUpdate akan SELALU BEDA setiap kali ada data baru dari Arduino.
-
-            string timeOld = this.LastUpdate ?? "";
-            string timeNew = newData.LastUpdate ?? "";
-
-            // Cukup bandingkan stringnya saja. 
-            // "10:00:05.100" != "10:00:05.600" -> Pasti TRUE -> Pasti BLINK.
-            if (timeOld != timeNew)
-            {
-                return true;
-            }
-
-            // Opsional: Cek status jika jam kebetulan sama (sangat jarang terjadi sekarang)
+            if ((this.LastUpdate ?? "") != (newData.LastUpdate ?? "")) return true;
             if (this.NilaiA0 != newData.NilaiA0) return true;
-
             return false;
         }
+        public MachineDetailViewModel()
+        {
+            ShowShiftCommand = new RelayCommand(_ => ShowTrend = false);
+            ShowTrendCommand = new RelayCommand(_ => ShowTrend = true);
+        }
     }
-
-    // Nested Class untuk Shift
     public class ShiftSummaryViewModel : ViewModelBase
     {
         public int Id { get; set; }

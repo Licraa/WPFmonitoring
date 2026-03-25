@@ -26,21 +26,12 @@ namespace MonitoringApp.Data
         public virtual DbSet<Shift1> Shift1s { get; set; }
         public virtual DbSet<Shift2> Shift2s { get; set; }
         public virtual DbSet<Shift3> Shift3s { get; set; }
+        public virtual DbSet<MachineShiftData> MachineShiftDatas { get; set; }
+        public virtual DbSet<DailyUptimeLog> DailyUptimeLogs { get; set; }
 
         // --- 2. KONFIGURASI KONEKSI ---
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            if (!optionsBuilder.IsConfigured)
-            {
-                var configBuilder = new ConfigurationBuilder()
-                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-                var configuration = configBuilder.Build();
-                var connectionString = configuration.GetConnectionString("DefaultConnection");
-
-                optionsBuilder.UseSqlServer(connectionString);
-            }
         }
 
         // --- 3. MAPPING TABEL ---
@@ -88,6 +79,59 @@ namespace MonitoringApp.Data
             ConfigureShiftTable<Shift1>(modelBuilder, "shift_1");
             ConfigureShiftTable<Shift2>(modelBuilder, "shift_2");
             ConfigureShiftTable<Shift3>(modelBuilder, "shift_3");
+
+            // --- TAMBAHKAN RELASI FOREIGN KEY DISINI ---
+            // A. Relasi Line ke DataRealtime
+            modelBuilder.Entity<DataRealtime>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<DataRealtime>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade); // Otomatis hapus jika Line dihapus
+
+            // B. Relasi Line ke Shift1
+            modelBuilder.Entity<Shift1>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<Shift1>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // C. Relasi Line ke Shift2
+            modelBuilder.Entity<Shift2>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<Shift2>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // D. Relasi Line ke Shift3
+            modelBuilder.Entity<Shift3>()
+                .HasOne<Line>()
+                .WithOne()
+                .HasForeignKey<Shift3>(e => e.Id)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DailyUptimeLog>()
+                .HasOne(d => d.Line)             // Log ini punya 1 Line induk
+                .WithMany()                      // Tapi Line induk bisa punya Banyak Log
+                .HasForeignKey(d => d.MachineId) // Yang jadi pengikatnya adalah MachineId
+                .OnDelete(DeleteBehavior.Cascade); // Jika Line dihapus, hapus juga semua log-nya!s
+
+            modelBuilder.Entity<MachineShiftData>(entity =>
+            {
+                // Nama tabelnya
+                entity.ToTable("machine_shift_data");
+
+                // Kunci gabungan
+                entity.HasKey(e => new { e.Id, e.ShiftNumber });
+
+                // 🌟 INI OBATNYA: Matikan Auto-Increment secara paksa!
+                entity.Property(e => e.Id)
+                      .HasColumnName("id")
+                      .ValueGeneratedNever();
+
+                entity.Property(e => e.ShiftNumber).HasColumnName("shift_number");
+
+                // (Bawahnya biarkan sama seperti yang Mas Raja tulis sebelumnya)
+            });
         }
 
         // --- HELPER CANGGIH ---
@@ -127,5 +171,6 @@ namespace MonitoringApp.Data
                     .HasDefaultValueSql("(getdate())");
             });
         }
+
     }
 }

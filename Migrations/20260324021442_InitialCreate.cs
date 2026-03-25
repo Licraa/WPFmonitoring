@@ -12,6 +12,56 @@ namespace MonitoringApp.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "line",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MachineCode = table.Column<int>(type: "int", nullable: false),
+                    line = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    line_production = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    process = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    name = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    remark = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_line", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TrendChart_log",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MachineId = table.Column<int>(type: "int", nullable: false),
+                    LogDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UptimePct = table.Column<int>(type: "int", nullable: false),
+                    DowntimePct = table.Column<int>(type: "int", nullable: false),
+                    TotalCount = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TrendChart_log", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    username = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    password = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    role = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_users", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "data_realtime",
                 columns: table => new
                 {
@@ -30,24 +80,12 @@ namespace MonitoringApp.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_data_realtime", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "line",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    MachineCode = table.Column<int>(type: "int", nullable: false),
-                    line = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    line_production = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    process = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    name = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    remark = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_line", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_data_realtime_line_id",
+                        column: x => x.id,
+                        principalTable: "line",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -69,6 +107,12 @@ namespace MonitoringApp.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_shift_1", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_shift_1_line_id",
+                        column: x => x.id,
+                        principalTable: "line",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -90,6 +134,12 @@ namespace MonitoringApp.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_shift_2", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_shift_2_line_id",
+                        column: x => x.id,
+                        principalTable: "line",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -111,22 +161,18 @@ namespace MonitoringApp.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_shift_3", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_shift_3_line_id",
+                        column: x => x.id,
+                        principalTable: "line",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "users",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    username = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    password = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    role = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_users", x => x.id);
-                });
+            migrationBuilder.InsertData(
+                table: "users",
+                columns: new[] { "id", "password", "role", "username" },
+                values: new object[] { 1, "wearesave", "Admin", "admin" });
         }
 
         /// <inheritdoc />
@@ -134,9 +180,6 @@ namespace MonitoringApp.Migrations
         {
             migrationBuilder.DropTable(
                 name: "data_realtime");
-
-            migrationBuilder.DropTable(
-                name: "line");
 
             migrationBuilder.DropTable(
                 name: "shift_1");
@@ -148,7 +191,13 @@ namespace MonitoringApp.Migrations
                 name: "shift_3");
 
             migrationBuilder.DropTable(
+                name: "TrendChart_log");
+
+            migrationBuilder.DropTable(
                 name: "users");
+
+            migrationBuilder.DropTable(
+                name: "line");
         }
     }
 }

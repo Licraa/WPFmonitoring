@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using ClosedXML.Excel;
 
@@ -9,10 +10,17 @@ namespace MonitoringApp.Services
     public class CsvLogService
     {
         private readonly string _baseFolder = "data_log_monitoring";
+        private readonly SettingService _settingService;
+        public CsvLogService(SettingService settingService)
+        {
+            _settingService = settingService;
+        }
 
-        // Helper: Mendapatkan Path File berdasarkan Tanggal & Shift spesifik
+        // Mendapatkan path CSV berdasarkan shift dan tanggal
         public string GetCsvPath(DateTime date, string shiftName)
         {
+            // Perbaikan: Gunakan path dari setting jika ada (opsional), 
+            // sementara tetap menggunakan default folder jika tidak
             string tanggalFolder = date.ToString("yyyy-MM-dd");
             string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _baseFolder, tanggalFolder);
 
@@ -22,55 +30,58 @@ namespace MonitoringApp.Services
             return Path.Combine(folderPath, fileName);
         }
 
-        // Helper: Menentukan Shift saat ini (Realtime)
+        // Mendapatkan info shift saat ini
         public (string shiftName, DateTime shiftDate) GetCurrentShiftInfo()
         {
             DateTime now = DateTime.Now;
-            TimeSpan time = now.TimeOfDay;
-            DateTime shiftDate = now.Date;
-            string shift = "shift_3";
+            TimeSpan currentTime = now.TimeOfDay;
 
-            TimeSpan startShift1 = new TimeSpan(6, 30, 0);
-            TimeSpan startShift2 = new TimeSpan(14, 30, 0);
-            TimeSpan startShift3 = new TimeSpan(22, 30, 0);
+            // Sekarang _settingService sudah bisa dikenali karena sudah di-inject melalui constructor
+            var settings = _settingService.GetSettings().ShiftSettings
+                            .OrderBy(s => TimeSpan.Parse(s.StartTime)).ToList();
 
-            if (time >= startShift1 && time < startShift2) shift = "shift_1";
-            else if (time >= startShift2 && time < startShift3) shift = "shift_2";
-            else
+            if (settings.Count == 0) return ("Shift 1", now.Date);
+
+            TimeSpan firstShiftStart = TimeSpan.Parse(settings.First().StartTime);
+
+            // LOGIKA CROSS-DAY:
+            if (currentTime < firstShiftStart)
             {
-                shift = "shift_3";
-                if (time < startShift1) shiftDate = now.Date.AddDays(-1);
+                return (settings.Last().Name, now.AddDays(-1).Date);
             }
 
-            return (shift, shiftDate);
+            var currentShift = settings.LastOrDefault(s => currentTime >= TimeSpan.Parse(s.StartTime));
+
+            return (currentShift?.Name ?? settings.First().Name, now.Date);
         }
 
-        // 1. HANYA SIMPAN KE CSV (Ringan & Cepat)
+        // 1. Simpan ke CSV (Dipanggil setiap detik)
         public void LogDataToCsv(int id, string name, string line, string process, string status,
             int count, float cycle, float avgCycle, int partHours, string downtime, string uptime)
         {
             try
             {
-                // Ambil info shift saat ini
                 var info = GetCurrentShiftInfo();
                 string csvPath = GetCsvPath(info.shiftDate, info.shiftName);
-
                 bool fileExists = File.Exists(csvPath);
 
-                using (var sw = new StreamWriter(csvPath, true, Encoding.UTF8))
+                // Gunakan FileShare.ReadWrite agar tidak bentrok dengan proses konversi
+                using (var fs = new FileStream(csvPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                using (var sw = new StreamWriter(fs, Encoding.UTF8))
                 {
                     if (!fileExists)
-                        sw.WriteLine("ID`NAME`LINE`PROCESS`STATUS`COUNT`CYCLE`AVG CYCLE`PART - HOURS`DOWNTIME`UPTIME`LOG TIME");
+                        sw.WriteLine("ID`NAME`LINE`PROCESS`STATUS`COUNT`CYCLE`AVG CYCLE`PART-HOURS`DOWNTIME`UPTIME`LOG TIME");
 
                     string logTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    string row = $"{id}`{EscapeCsv(name)}`{EscapeCsv(line)}`{EscapeCsv(process)}`{status}`{count}`{cycle:F2}`{avgCycle:F2}`{partHours}`{downtime}`{uptime}`{logTime}";
+                    // Menggunakan backtick ` sebagai separator
+                    string row = $"{id}`{name}`{line}`{process}`{status}`{count}`{cycle:F2}`{avgCycle:F2}`{partHours}`{downtime}`{uptime}`{logTime}";
                     sw.WriteLine(row);
                 }
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"CSV Error: {ex.Message}"); }
         }
 
-        // 2. FUNGSI MANUAL UNTUK CONVERT (Dipanggil saat Stop / Ganti Shift)
+        // 2. Konversi CSV ke Excel (xlsx)
         public void FinalizeExcel(string shiftName, DateTime shiftDate)
         {
             try
@@ -78,66 +89,73 @@ namespace MonitoringApp.Services
                 string csvPath = GetCsvPath(shiftDate, shiftName);
                 string excelPath = csvPath.Replace(".csv", ".xlsx");
 
-                if (!File.Exists(csvPath)) return; // Tidak ada data untuk diexport
+                if (!File.Exists(csvPath)) return;
 
-                var lines = File.ReadAllLines(csvPath);
-                if (lines.Length == 0) return;
+                // Tunggu jika file masih dikunci proses lain
+                int retry = 0;
+                while (IsFileLocked(new FileInfo(csvPath)) && retry < 5)
+                {
+                    System.Threading.Thread.Sleep(1000);
+                    retry++;
+                }
+
+                string[] lines = File.ReadAllLines(csvPath);
+                if (lines.Length <= 1) return;
 
                 using (var workbook = new XLWorkbook())
                 {
-                    var wsLog = workbook.Worksheets.Add("Log");
-
-                    // Parse CSV ke Excel
+                    // SHEET 1: LOG DATA (Semua baris)
+                    var wsLog = workbook.Worksheets.Add("Log Data");
                     for (int i = 0; i < lines.Length; i++)
                     {
-                        var cols = ParseCsvLine(lines[i]);
-                        for (int j = 0; j < cols.Count; j++)
+                        var cols = lines[i].Split('`');
+                        for (int j = 0; j < cols.Length; j++)
                         {
+                            // Coba parse ke angka agar di Excel bisa dihitung (SUM/AVG)
                             if (i > 0 && double.TryParse(cols[j], out double num))
                                 wsLog.Cell(i + 1, j + 1).Value = num;
                             else
                                 wsLog.Cell(i + 1, j + 1).Value = cols[j];
                         }
                     }
-
-                    // Formatting
-                    var headerRange = wsLog.Range(1, 1, 1, 12);
-                    headerRange.Style.Font.Bold = true;
-                    headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
                     wsLog.Columns().AdjustToContents();
+                    wsLog.FirstRow().Style.Font.Bold = true;
+                    wsLog.FirstRow().Style.Fill.BackgroundColor = XLColor.LightGray;
 
-                    // Create Summary Sheet
+                    // SHEET 2: SUMMARY (Hanya status terakhir per Mesin)
                     GenerateSummarySheet(workbook, lines);
 
                     workbook.SaveAs(excelPath);
-                    System.Diagnostics.Debug.WriteLine($"[SUCCESS] Excel Created: {excelPath}");
                 }
+                System.Diagnostics.Debug.WriteLine($"[SUCCESS] Excel Created: {excelPath}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Excel Export Error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] FinalizeExcel: {ex.Message}");
             }
         }
 
         private void GenerateSummarySheet(XLWorkbook workbook, string[] lines)
         {
             var wsSummary = workbook.Worksheets.Add("Summary");
-            var summaryDict = new Dictionary<string, List<string>>();
-            List<string> header = ParseCsvLine(lines[0]);
+            var lastDataPerMachine = new Dictionary<string, string[]>();
 
+            // Header
+            var header = lines[0].Split('`');
+            for (int j = 0; j < header.Length; j++) wsSummary.Cell(1, j + 1).Value = header[j];
+
+            // Ambil data terbaru berdasarkan ID mesin (Kolom pertama)
             for (int i = 1; i < lines.Length; i++)
             {
-                var cols = ParseCsvLine(lines[i]);
-                if (cols.Count > 0) summaryDict[cols[0]] = cols;
+                var cols = lines[i].Split('`');
+                if (cols.Length > 0) lastDataPerMachine[cols[0]] = cols;
             }
 
-            for (int j = 0; j < header.Count; j++) wsSummary.Cell(1, j + 1).Value = header[j];
-
             int rowIdx = 2;
-            foreach (var kvp in summaryDict)
+            foreach (var kvp in lastDataPerMachine)
             {
                 var cols = kvp.Value;
-                for (int j = 0; j < cols.Count; j++)
+                for (int j = 0; j < cols.Length; j++)
                 {
                     if (double.TryParse(cols[j], out double num))
                         wsSummary.Cell(rowIdx, j + 1).Value = num;
@@ -147,31 +165,23 @@ namespace MonitoringApp.Services
                 rowIdx++;
             }
 
-            var headerRange = wsSummary.Range(1, 1, 1, 12);
+            wsSummary.Columns().AdjustToContents();
+            var headerRange = wsSummary.Range(1, 1, 1, header.Length);
             headerRange.Style.Font.Bold = true;
             headerRange.Style.Fill.BackgroundColor = XLColor.SkyBlue;
-            wsSummary.Columns().AdjustToContents();
         }
 
-        private string EscapeCsv(string field)
+        private bool IsFileLocked(FileInfo file)
         {
-            if (string.IsNullOrEmpty(field)) return "";
-            return field.Contains(",") ? $"\"{field}\"" : field;
-        }
-
-        private List<string> ParseCsvLine(string line)
-        {
-            var result = new List<string>();
-            bool inQuotes = false;
-            StringBuilder val = new StringBuilder();
-            foreach (char c in line)
+            try
             {
-                if (c == '\"') inQuotes = !inQuotes;
-                else if (c == '`' && !inQuotes) { result.Add(val.ToString()); val.Clear(); }
-                else val.Append(c);
+                using (FileStream stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    stream.Close();
+                }
             }
-            result.Add(val.ToString());
-            return result;
+            catch (IOException) { return true; }
+            return false;
         }
     }
 }

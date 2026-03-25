@@ -12,7 +12,7 @@ using MonitoringApp.Data;
 namespace MonitoringApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251201180202_InitialCreate")]
+    [Migration("20260324021442_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,6 +24,34 @@ namespace MonitoringApp.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("MonitoringApp.Models.DailyUptimeLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DowntimePct")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LogDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UptimePct")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TrendChart_log");
+                });
 
             modelBuilder.Entity("MonitoringApp.Models.DataRealtime", b =>
                 {
@@ -312,6 +340,51 @@ namespace MonitoringApp.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("users", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Password = "wearesave",
+                            Role = "Admin",
+                            Username = "admin"
+                        });
+                });
+
+            modelBuilder.Entity("MonitoringApp.Models.DataRealtime", b =>
+                {
+                    b.HasOne("MonitoringApp.Models.Line", null)
+                        .WithOne()
+                        .HasForeignKey("MonitoringApp.Models.DataRealtime", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MonitoringApp.Models.Shift1", b =>
+                {
+                    b.HasOne("MonitoringApp.Models.Line", null)
+                        .WithOne()
+                        .HasForeignKey("MonitoringApp.Models.Shift1", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MonitoringApp.Models.Shift2", b =>
+                {
+                    b.HasOne("MonitoringApp.Models.Line", null)
+                        .WithOne()
+                        .HasForeignKey("MonitoringApp.Models.Shift2", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MonitoringApp.Models.Shift3", b =>
+                {
+                    b.HasOne("MonitoringApp.Models.Line", null)
+                        .WithOne()
+                        .HasForeignKey("MonitoringApp.Models.Shift3", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

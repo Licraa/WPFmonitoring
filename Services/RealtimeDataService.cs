@@ -1,81 +1,68 @@
-﻿using System;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Data;
 using MonitoringApp.Models;
+using System;
+using System.Diagnostics;
+using System.Linq;
 
 namespace MonitoringApp.Services
 {
     public class RealtimeDataService
     {
-        private readonly AppDbContext _context;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        // ✅ PERBAIKAN DI SINI:
-        // Jangan minta string connectionString. Mintalah AppDbContext.
-        // DI Container akan otomatis menyediakannya.
-        public RealtimeDataService(AppDbContext context)
+        public RealtimeDataService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
+            Debug.WriteLine("Realtime service STARTED with Factory Pattern");
         }
 
+        // ─── 1. SIMPAN DATA DARI ARDUINO ─────────────────────────────────────────
         public void SaveToDatabase(
-            int id,
-            int nilaiA0,
-            int nilaiTerakhirA2,
-            float durasiTerakhirA4,
-            float ratarataTerakhirA4,
-            int parthours,
-            float dataCh1_Sec,
-            float uptime_Sec,
-            int p_datach1,
-            int p_uptime)
+            int id, int nilaiA0, int nilaiTerakhirA2, float durasiTerakhirA4,
+            float ratarataTerakhirA4, int parthours, float dataCh1_Sec,
+            float uptime_Sec, int p_datach1, int p_uptime)
         {
-            try
+            using (var context = _contextFactory.CreateDbContext())
             {
-                // Konversi Detik ke TimeSpan
-                TimeSpan ts_dataCh1 = TimeSpan.FromSeconds(dataCh1_Sec);
-                TimeSpan ts_uptime = TimeSpan.FromSeconds(uptime_Sec);
-
-                // 1. Simpan ke Tabel Utama (DataRealtime)
-                UpsertData(_context.DataRealtimes, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-
-                // 2. Simpan ke Tabel Shift yang Sesuai (Logic Jam Kerja)
-                TimeSpan now = DateTime.Now.TimeOfDay;
-                if (now >= new TimeSpan(6, 30, 0) && now < new TimeSpan(14, 30, 0))
+                try
                 {
-                    UpsertData(_context.Shift1s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-                }
-                else if (now >= new TimeSpan(14, 30, 0) && now < new TimeSpan(22, 30, 0))
-                {
-                    UpsertData(_context.Shift2s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-                }
-                else
-                {
-                    UpsertData(_context.Shift3s, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4, ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
-                }
+                    TimeSpan ts_dataCh1 = TimeSpan.FromSeconds(dataCh1_Sec);
+                    TimeSpan ts_uptime = TimeSpan.FromSeconds(uptime_Sec);
 
-                _context.SaveChanges(); // Eksekusi ke DB
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
+                    // A. Simpan ke Tabel Data Realtime
+                    UpsertData(context.DataRealtimes, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4,
+                               ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+
+                    // B. Cek Jam Sekarang (Ini Shift Berapa?)
+                    int currentShift = 3; // Default Shift 3
+                    TimeSpan now = DateTime.Now.TimeOfDay;
+                    if (now >= new TimeSpan(6, 30, 0) && now < new TimeSpan(14, 30, 0)) currentShift = 1;
+                    else if (now >= new TimeSpan(14, 30, 0) && now < new TimeSpan(22, 30, 0)) currentShift = 2;
+
+                    // C. Simpan ke Tabel 1 Buku Besar (MachineShiftDatas)
+                    UpsertShiftData(context, id, currentShift, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4,
+                                    ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
+
+                    context.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
+                }
             }
         }
 
-        // Helper Generic untuk UPSERT (Update or Insert)
+        // ─── HELPER A: SIMPAN DATA REALTIME (TETAP SAMA) ─────────────────────────
         private void UpsertData<T>(DbSet<T> dbSet, int id, int a0, int a2, float a4, float avgA4, int ph, TimeSpan ch1, TimeSpan up, int pCh1, int pUp)
             where T : MachineDataBase, new()
         {
             var data = dbSet.FirstOrDefault(x => x.Id == id);
-
             if (data == null)
             {
-                // INSERT BARU
                 data = new T { Id = id };
                 dbSet.Add(data);
             }
-
-            // UPDATE DATA
             data.NilaiA0 = a0;
             data.NilaiTerakhirA2 = a2;
             data.DurasiTerakhirA4 = a4;
@@ -86,6 +73,147 @@ namespace MonitoringApp.Services
             data.P_DataCh1 = pCh1;
             data.P_Uptime = pUp;
             data.Last_Update = DateTime.Now;
+        }
+
+        // ─── HELPER B: SIMPAN DATA SHIFT (TABEL BARU) ────────────────────────────
+        private void UpsertShiftData(AppDbContext context, int id, int shiftNum, int a0, int a2, float a4, float avgA4, int ph, TimeSpan ch1, TimeSpan up, int pCh1, int pUp)
+        {
+            // Cari data berdasarkan ID Mesin DAN Nomor Shift-nya
+            var data = context.MachineShiftDatas.FirstOrDefault(x => x.Id == id && x.ShiftNumber == shiftNum);
+
+            if (data == null)
+            {
+                data = new MachineShiftData { Id = id, ShiftNumber = shiftNum };
+                context.MachineShiftDatas.Add(data);
+            }
+
+            data.NilaiA0 = a0;
+            data.NilaiTerakhirA2 = a2;
+            data.DurasiTerakhirA4 = a4;
+            data.RataRataTerakhirA4 = avgA4;
+            data.PartHours = ph;
+            data.DataCh1 = ch1;
+            data.Uptime = up;
+            data.P_DataCh1 = pCh1;
+            data.P_Uptime = pUp;
+            data.Last_Update = DateTime.Now;
+        }
+
+        // ─── 2. FUNGSI REKAP HARIAN (SUMMARIZE) ──────────────────────────────────
+        // ─── MAIN METHOD: SUMMARIZE ALL MACHINES ─────────────────────────────────────
+        public void SummarizeAllMachines(DateTime summaryDate)
+        {
+            using (var context = _contextFactory.CreateDbContext())
+            {
+                // 🌟 PERBAIKAN 1: Ambil SEMUA data di awal (Bawa seluruh rak telur ke meja)
+                var machineList = context.Lines.AsNoTracking().ToList();
+                var allShiftData = context.MachineShiftDatas.AsNoTracking().ToList(); // Ambil semua dari Panci Baru
+
+                foreach (var machine in machineList)
+                {
+                    // 🌟 Pencarian ini sekarang SANGAT CEPAT karena dicarinya di RAM, bukan di Database
+                    var s1 = allShiftData.FirstOrDefault(m => m.Id == machine.Id && m.ShiftNumber == 1);
+                    var s2 = allShiftData.FirstOrDefault(m => m.Id == machine.Id && m.ShiftNumber == 2);
+                    var s3 = allShiftData.FirstOrDefault(m => m.Id == machine.Id && m.ShiftNumber == 3);
+
+                    // 1. Process individual shifts
+                    CalculateShiftPercentAndSave(context, machine.Id, "Shift 1", summaryDate, s1);
+                    CalculateShiftPercentAndSave(context, machine.Id, "Shift 2", summaryDate, s2);
+                    CalculateShiftPercentAndSave(context, machine.Id, "Shift 3", summaryDate, s3);
+
+                    // 2. PROCESS ALL DAY
+                    //CalculateDailyTotalAndSave(context, machine.Id, summaryDate, s1, s2, s3);
+                }
+
+                // Simpan semua perubahan sekaligus ke Database
+                context.SaveChanges();
+            }
+        }
+
+        // ─── HELPER 1: CALCULATE INDIVIDUAL SHIFT (DENGAN UPSERT) ───────────────────
+        private void CalculateShiftPercentAndSave(AppDbContext context, int machineId, string shiftName, DateTime date, MachineDataBase? shiftData)
+        {
+            if (shiftData == null) return;
+
+            double upSec = shiftData.Uptime.TotalSeconds;
+            double downSec = shiftData.DataCh1.TotalSeconds;
+            double totalSec = upSec + downSec;
+
+            int upPct = 0;
+            if (totalSec > 0)
+            {
+                upPct = (int)Math.Round((upSec / totalSec) * 100);
+            }
+
+            // 🌟 PERBAIKAN 2: LOGIKA UPSERT (Cek buku catatan dulu)
+            var existingLog = context.DailyUptimeLogs.FirstOrDefault(x =>
+                x.MachineId == machineId &&
+                x.ShiftName == shiftName &&
+                x.LogDate.Date == date.Date);
+
+            if (existingLog != null)
+            {
+                // JIKA SUDAH ADA -> UPDATE Tulisannya
+                existingLog.UptimePct = upPct;
+                existingLog.DowntimePct = 100 - upPct;
+                existingLog.TotalCount = (int)shiftData.PartHours;
+            }
+            else
+            {
+                // JIKA BELUM ADA -> INSERT / Buat baru
+                context.DailyUptimeLogs.Add(new DailyUptimeLog
+                {
+                    MachineId = machineId,
+                    ShiftName = shiftName,
+                    LogDate = date.Date,
+                    UptimePct = upPct,
+                    DowntimePct = 100 - upPct,
+                    TotalCount = (int)shiftData.PartHours
+                });
+            }
+        }
+
+        // ─── HELPER 2: CALCULATE DAILY TOTAL (DENGAN UPSERT) ────────────────────────
+        private void CalculateDailyTotalAndSave(AppDbContext context, int machineId, DateTime date, params MachineDataBase?[] shifts)
+        {
+            double totalUptimeSeconds = shifts.Sum(s => s?.Uptime.TotalSeconds ?? 0);
+            double totalDowntimeSeconds = shifts.Sum(s => s?.DataCh1.TotalSeconds ?? 0);
+            int totalProductionCount = (int)shifts.Sum(s => s?.PartHours ?? 0);
+
+            double grandTotalSeconds = totalUptimeSeconds + totalDowntimeSeconds;
+            int finalUptimePercent = 0;
+
+            if (grandTotalSeconds > 0)
+            {
+                finalUptimePercent = (int)Math.Round((totalUptimeSeconds / grandTotalSeconds) * 100);
+            }
+
+            // 🌟 PERBAIKAN 2: LOGIKA UPSERT UNTUK ALL DAY
+            var existingLog = context.DailyUptimeLogs.FirstOrDefault(x =>
+                x.MachineId == machineId &&
+                x.ShiftName == "ALL DAY" &&
+                x.LogDate.Date == date.Date);
+
+            if (existingLog != null)
+            {
+                // UPDATE
+                existingLog.UptimePct = finalUptimePercent;
+                existingLog.DowntimePct = 100 - finalUptimePercent;
+                existingLog.TotalCount = totalProductionCount;
+            }
+            else
+            {
+                // INSERT
+                context.DailyUptimeLogs.Add(new DailyUptimeLog
+                {
+                    MachineId = machineId,
+                    ShiftName = "ALL DAY",
+                    LogDate = date.Date,
+                    UptimePct = finalUptimePercent,
+                    DowntimePct = 100 - finalUptimePercent,
+                    TotalCount = totalProductionCount
+                });
+            }
         }
     }
 }

@@ -138,9 +138,8 @@
                         <WrapPanel Orientation="Horizontal">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,10">
                                 <Ellipse x:Name="dbStatusIndicator" Width="10" Height="10" Fill="#EF4444" Margin="0,0,8,0"/>
-                                <TextBlock x:Name="txtDbStatus" Text="Disconnected" FontWeight="Bold" Foreground="#374151" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <Button x:Name="btnDbConnect" Content="Connect" Click="BtnDbConnect_Click" 
-                                        Background="#3B82F6" Height="24" FontSize="10" Padding="8,0" Style="{StaticResource ActionBtn}" Width="63"/>
+                                <TextBlock x:Name="txtDbStatus" Text="Disconnected" FontWeight="Bold" Foreground="#374151" FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    
                             </StackPanel>
                             <Border Background="#E0F2FE" CornerRadius="4" Padding="8,4" BorderBrush="#BAE6FD" BorderThickness="1" Width="162">
                                 <StackPanel Orientation="Horizontal">
