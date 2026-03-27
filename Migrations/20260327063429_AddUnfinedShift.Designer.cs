@@ -12,8 +12,8 @@ using MonitoringApp.Data;
 namespace MonitoringApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260324061348_AddUnifiedShiftTable")]
-    partial class AddUnifiedShiftTable
+    [Migration("20260327063429_AddUnfinedShift")]
+    partial class AddUnfinedShift
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -161,10 +161,12 @@ namespace MonitoringApp.Migrations
             modelBuilder.Entity("MonitoringApp.Models.MachineShiftData", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<int>("ShiftNumber")
+                        .HasColumnType("int")
+                        .HasColumnName("shift_number");
 
                     b.Property<TimeSpan>("DataCh1")
                         .HasColumnType("time");
@@ -193,174 +195,12 @@ namespace MonitoringApp.Migrations
                     b.Property<float>("RataRataTerakhirA4")
                         .HasColumnType("real");
 
-                    b.Property<int>("ShiftNumber")
-                        .HasColumnType("int");
-
                     b.Property<TimeSpan>("Uptime")
                         .HasColumnType("time");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id", "ShiftNumber");
 
-                    b.ToTable("MachineShiftDatas");
-                });
-
-            modelBuilder.Entity("MonitoringApp.Models.Shift1", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<TimeSpan>("DataCh1")
-                        .HasColumnType("time")
-                        .HasColumnName("dataCh1");
-
-                    b.Property<float>("DurasiTerakhirA4")
-                        .HasColumnType("real")
-                        .HasColumnName("durasiTerakhirA4");
-
-                    b.Property<DateTime>("Last_Update")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasColumnName("last_update")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<int>("NilaiA0")
-                        .HasColumnType("int")
-                        .HasColumnName("nilaiA0");
-
-                    b.Property<int>("NilaiTerakhirA2")
-                        .HasColumnType("int")
-                        .HasColumnName("nilaiTerakhirA2");
-
-                    b.Property<int>("P_DataCh1")
-                        .HasColumnType("int")
-                        .HasColumnName("p_datach1");
-
-                    b.Property<int>("P_Uptime")
-                        .HasColumnType("int")
-                        .HasColumnName("p_uptime");
-
-                    b.Property<int>("PartHours")
-                        .HasColumnType("int")
-                        .HasColumnName("parthours");
-
-                    b.Property<float>("RataRataTerakhirA4")
-                        .HasColumnType("real")
-                        .HasColumnName("ratarataTerakhirA4");
-
-                    b.Property<TimeSpan>("Uptime")
-                        .HasColumnType("time")
-                        .HasColumnName("uptime");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("shift_1", (string)null);
-                });
-
-            modelBuilder.Entity("MonitoringApp.Models.Shift2", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<TimeSpan>("DataCh1")
-                        .HasColumnType("time")
-                        .HasColumnName("dataCh1");
-
-                    b.Property<float>("DurasiTerakhirA4")
-                        .HasColumnType("real")
-                        .HasColumnName("durasiTerakhirA4");
-
-                    b.Property<DateTime>("Last_Update")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasColumnName("last_update")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<int>("NilaiA0")
-                        .HasColumnType("int")
-                        .HasColumnName("nilaiA0");
-
-                    b.Property<int>("NilaiTerakhirA2")
-                        .HasColumnType("int")
-                        .HasColumnName("nilaiTerakhirA2");
-
-                    b.Property<int>("P_DataCh1")
-                        .HasColumnType("int")
-                        .HasColumnName("p_datach1");
-
-                    b.Property<int>("P_Uptime")
-                        .HasColumnType("int")
-                        .HasColumnName("p_uptime");
-
-                    b.Property<int>("PartHours")
-                        .HasColumnType("int")
-                        .HasColumnName("parthours");
-
-                    b.Property<float>("RataRataTerakhirA4")
-                        .HasColumnType("real")
-                        .HasColumnName("ratarataTerakhirA4");
-
-                    b.Property<TimeSpan>("Uptime")
-                        .HasColumnType("time")
-                        .HasColumnName("uptime");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("shift_2", (string)null);
-                });
-
-            modelBuilder.Entity("MonitoringApp.Models.Shift3", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<TimeSpan>("DataCh1")
-                        .HasColumnType("time")
-                        .HasColumnName("dataCh1");
-
-                    b.Property<float>("DurasiTerakhirA4")
-                        .HasColumnType("real")
-                        .HasColumnName("durasiTerakhirA4");
-
-                    b.Property<DateTime>("Last_Update")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasColumnName("last_update")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<int>("NilaiA0")
-                        .HasColumnType("int")
-                        .HasColumnName("nilaiA0");
-
-                    b.Property<int>("NilaiTerakhirA2")
-                        .HasColumnType("int")
-                        .HasColumnName("nilaiTerakhirA2");
-
-                    b.Property<int>("P_DataCh1")
-                        .HasColumnType("int")
-                        .HasColumnName("p_datach1");
-
-                    b.Property<int>("P_Uptime")
-                        .HasColumnType("int")
-                        .HasColumnName("p_uptime");
-
-                    b.Property<int>("PartHours")
-                        .HasColumnType("int")
-                        .HasColumnName("parthours");
-
-                    b.Property<float>("RataRataTerakhirA4")
-                        .HasColumnType("real")
-                        .HasColumnName("ratarataTerakhirA4");
-
-                    b.Property<TimeSpan>("Uptime")
-                        .HasColumnType("time")
-                        .HasColumnName("uptime");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("shift_3", (string)null);
+                    b.ToTable("machine_shift_data", (string)null);
                 });
 
             modelBuilder.Entity("MonitoringApp.Models.User", b =>
@@ -420,33 +260,6 @@ namespace MonitoringApp.Migrations
                     b.HasOne("MonitoringApp.Models.Line", null)
                         .WithOne()
                         .HasForeignKey("MonitoringApp.Models.DataRealtime", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("MonitoringApp.Models.Shift1", b =>
-                {
-                    b.HasOne("MonitoringApp.Models.Line", null)
-                        .WithOne()
-                        .HasForeignKey("MonitoringApp.Models.Shift1", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("MonitoringApp.Models.Shift2", b =>
-                {
-                    b.HasOne("MonitoringApp.Models.Line", null)
-                        .WithOne()
-                        .HasForeignKey("MonitoringApp.Models.Shift2", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("MonitoringApp.Models.Shift3", b =>
-                {
-                    b.HasOne("MonitoringApp.Models.Line", null)
-                        .WithOne()
-                        .HasForeignKey("MonitoringApp.Models.Shift3", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

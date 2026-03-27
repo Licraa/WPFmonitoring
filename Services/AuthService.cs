@@ -45,5 +45,13 @@ namespace MonitoringApp.Services
 
             return null; // Password Salah
         }
+
+        // Tambahkan fungsi ini untuk mengecek username
+        public bool IsUsernameExist(string username)
+        {
+            // .Any() akan mengecek database dan langsung mengembalikan nilai true jika ketemu 1 saja,
+            // ini jauh lebih cepat daripada mengambil seluruh baris data.
+            return _context.Users.Any(u => u.Username == username);
+        }
     }
 }

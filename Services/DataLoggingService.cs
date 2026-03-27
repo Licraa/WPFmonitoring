@@ -1,10 +1,12 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using MonitoringApp.Data;
+using MonitoringApp.Models;
+using MonitoringApp.Services;
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using MonitoringApp.Services;
 
 namespace MonitoringApp.Services
 {
@@ -123,10 +125,43 @@ namespace MonitoringApp.Services
                 // Auto-finalize shift sebelumnya ke Excel setelah delay singkat agar disk I/O selesai
                 Task.Run(async () => {
                     await FlushBufferToCsv();
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                        // Ambil semua data dari MachineShiftData untuk shift yang baru saja berakhir
+                        var lastShiftData = context.MachineShiftDatas
+                            .Where(x => x.ShiftNumber == GetShiftNumber(oldName))
+                            .ToList();
+
+                        foreach (var data in lastShiftData)
+                        {
+                            // Simpan ke tabel DailyUptimeLogs (Trend)
+                            context.DailyUptimeLogs.Add(new DailyUptimeLog
+                            {
+                                MachineId = data.Id,
+                                LogDate = oldDate,
+                                ShiftName = oldName,
+                                UptimePct = data.P_Uptime,
+                                TotalCount = data.NilaiTerakhirA2
+                            });
+                        }
+                        await context.SaveChangesAsync();
+                    }
                     await Task.Delay(3000);
                     _csvService.FinalizeExcel(oldName, oldDate);
                 });
             }
+        }
+
+        private int GetShiftNumber(string name)
+        {
+            // Logika sederhana: jika nama shift mengandung angka 1, maka return 1, dst.
+            if (name.Contains("1")) return 1;
+            if (name.Contains("2")) return 2;
+            if (name.Contains("3")) return 3;
+
+            return 1; // Default jika tidak ditemukan
         }
 
         private async void StartCsvWorker()

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using ClosedXML.Excel;
+// PENTING 1: Tambahkan using ini agar ShiftSetting dikenali
+using MonitoringApp.Models;
 
 namespace MonitoringApp.Services
 {
@@ -19,8 +21,6 @@ namespace MonitoringApp.Services
         // Mendapatkan path CSV berdasarkan shift dan tanggal
         public string GetCsvPath(DateTime date, string shiftName)
         {
-            // Perbaikan: Gunakan path dari setting jika ada (opsional), 
-            // sementara tetap menggunakan default folder jika tidak
             string tanggalFolder = date.ToString("yyyy-MM-dd");
             string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _baseFolder, tanggalFolder);
 
@@ -36,23 +36,37 @@ namespace MonitoringApp.Services
             DateTime now = DateTime.Now;
             TimeSpan currentTime = now.TimeOfDay;
 
-            // Sekarang _settingService sudah bisa dikenali karena sudah di-inject melalui constructor
-            var settings = _settingService.GetSettings().ShiftSettings
-                            .OrderBy(s => TimeSpan.Parse(s.StartTime)).ToList();
+            // PENTING 2: Logika pemisahan hari biasa dan Sabtu
+            var allSettings = _settingService.GetSettings();
+            List<ShiftItem> activeSettings;
 
-            if (settings.Count == 0) return ("Shift 1", now.Date);
+            if (now.DayOfWeek == DayOfWeek.Saturday)
+            {
+                // Jika Sabtu, ambil jadwal khusus Sabtu
+                activeSettings = allSettings.SaturdayShiftSettings
+                                    .OrderBy(s => TimeSpan.Parse(s.StartTime)).ToList();
+            }
+            else
+            {
+                // Jika bukan Sabtu, ambil jadwal biasa
+                activeSettings = allSettings.ShiftSettings
+                                    .OrderBy(s => TimeSpan.Parse(s.StartTime)).ToList();
+            }
 
-            TimeSpan firstShiftStart = TimeSpan.Parse(settings.First().StartTime);
+            // Jika kosong, kembalikan nilai default
+            if (activeSettings == null || activeSettings.Count == 0) return ("Shift 1", now.Date);
+
+            TimeSpan firstShiftStart = TimeSpan.Parse(activeSettings.First().StartTime);
 
             // LOGIKA CROSS-DAY:
             if (currentTime < firstShiftStart)
             {
-                return (settings.Last().Name, now.AddDays(-1).Date);
+                return (activeSettings.Last().Name, now.AddDays(-1).Date);
             }
 
-            var currentShift = settings.LastOrDefault(s => currentTime >= TimeSpan.Parse(s.StartTime));
+            var currentShift = activeSettings.LastOrDefault(s => currentTime >= TimeSpan.Parse(s.StartTime));
 
-            return (currentShift?.Name ?? settings.First().Name, now.Date);
+            return (currentShift?.Name ?? activeSettings.First().Name, now.Date);
         }
 
         // 1. Simpan ke CSV (Dipanggil setiap detik)
@@ -65,7 +79,6 @@ namespace MonitoringApp.Services
                 string csvPath = GetCsvPath(info.shiftDate, info.shiftName);
                 bool fileExists = File.Exists(csvPath);
 
-                // Gunakan FileShare.ReadWrite agar tidak bentrok dengan proses konversi
                 using (var fs = new FileStream(csvPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
                 using (var sw = new StreamWriter(fs, Encoding.UTF8))
                 {
@@ -73,7 +86,6 @@ namespace MonitoringApp.Services
                         sw.WriteLine("ID`NAME`LINE`PROCESS`STATUS`COUNT`CYCLE`AVG CYCLE`PART-HOURS`DOWNTIME`UPTIME`LOG TIME");
 
                     string logTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    // Menggunakan backtick ` sebagai separator
                     string row = $"{id}`{name}`{line}`{process}`{status}`{count}`{cycle:F2}`{avgCycle:F2}`{partHours}`{downtime}`{uptime}`{logTime}";
                     sw.WriteLine(row);
                 }
@@ -91,7 +103,6 @@ namespace MonitoringApp.Services
 
                 if (!File.Exists(csvPath)) return;
 
-                // Tunggu jika file masih dikunci proses lain
                 int retry = 0;
                 while (IsFileLocked(new FileInfo(csvPath)) && retry < 5)
                 {
@@ -104,14 +115,12 @@ namespace MonitoringApp.Services
 
                 using (var workbook = new XLWorkbook())
                 {
-                    // SHEET 1: LOG DATA (Semua baris)
                     var wsLog = workbook.Worksheets.Add("Log Data");
                     for (int i = 0; i < lines.Length; i++)
                     {
                         var cols = lines[i].Split('`');
                         for (int j = 0; j < cols.Length; j++)
                         {
-                            // Coba parse ke angka agar di Excel bisa dihitung (SUM/AVG)
                             if (i > 0 && double.TryParse(cols[j], out double num))
                                 wsLog.Cell(i + 1, j + 1).Value = num;
                             else
@@ -122,7 +131,6 @@ namespace MonitoringApp.Services
                     wsLog.FirstRow().Style.Font.Bold = true;
                     wsLog.FirstRow().Style.Fill.BackgroundColor = XLColor.LightGray;
 
-                    // SHEET 2: SUMMARY (Hanya status terakhir per Mesin)
                     GenerateSummarySheet(workbook, lines);
 
                     workbook.SaveAs(excelPath);
@@ -140,11 +148,9 @@ namespace MonitoringApp.Services
             var wsSummary = workbook.Worksheets.Add("Summary");
             var lastDataPerMachine = new Dictionary<string, string[]>();
 
-            // Header
             var header = lines[0].Split('`');
             for (int j = 0; j < header.Length; j++) wsSummary.Cell(1, j + 1).Value = header[j];
 
-            // Ambil data terbaru berdasarkan ID mesin (Kolom pertama)
             for (int i = 1; i < lines.Length; i++)
             {
                 var cols = lines[i].Split('`');

@@ -10,18 +10,19 @@ namespace MonitoringApp.Services
     public class RealtimeDataService
     {
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly CsvLogService _csvService;
 
-        public RealtimeDataService(IDbContextFactory<AppDbContext> contextFactory)
+        public RealtimeDataService(IDbContextFactory<AppDbContext> contextFactory, CsvLogService csvService)
         {
             _contextFactory = contextFactory;
+            _csvService = csvService;
             Debug.WriteLine("Realtime service STARTED with Factory Pattern");
         }
 
         // ─── 1. SIMPAN DATA DARI ARDUINO ─────────────────────────────────────────
-        public void SaveToDatabase(
-            int id, int nilaiA0, int nilaiTerakhirA2, float durasiTerakhirA4,
-            float ratarataTerakhirA4, int parthours, float dataCh1_Sec,
-            float uptime_Sec, int p_datach1, int p_uptime)
+        public void SaveToDatabase(int id, int nilaiA0, int nilaiTerakhirA2, float durasiTerakhirA4,
+                               float ratarataTerakhirA4, int parthours, float dataCh1_Sec,
+                               float uptime_Sec, int p_datach1, int p_uptime)
         {
             using (var context = _contextFactory.CreateDbContext())
             {
@@ -30,17 +31,13 @@ namespace MonitoringApp.Services
                     TimeSpan ts_dataCh1 = TimeSpan.FromSeconds(dataCh1_Sec);
                     TimeSpan ts_uptime = TimeSpan.FromSeconds(uptime_Sec);
 
-                    // A. Simpan ke Tabel Data Realtime
                     UpsertData(context.DataRealtimes, id, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4,
                                ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
 
-                    // B. Cek Jam Sekarang (Ini Shift Berapa?)
-                    int currentShift = 3; // Default Shift 3
-                    TimeSpan now = DateTime.Now.TimeOfDay;
-                    if (now >= new TimeSpan(6, 30, 0) && now < new TimeSpan(14, 30, 0)) currentShift = 1;
-                    else if (now >= new TimeSpan(14, 30, 0) && now < new TimeSpan(22, 30, 0)) currentShift = 2;
+                    // SEKARANG SUDAH SINGKRON: Mengambil jam dari Setting Service via CsvLogService
+                    var shiftInfo = _csvService.GetCurrentShiftInfo();
+                    int currentShift = GetShiftNumber(shiftInfo.shiftName);
 
-                    // C. Simpan ke Tabel 1 Buku Besar (MachineShiftDatas)
                     UpsertShiftData(context, id, currentShift, nilaiA0, nilaiTerakhirA2, durasiTerakhirA4,
                                     ratarataTerakhirA4, parthours, ts_dataCh1, ts_uptime, p_datach1, p_uptime);
 
@@ -51,6 +48,13 @@ namespace MonitoringApp.Services
                     Debug.WriteLine($"Error Saving Realtime: {ex.Message}");
                 }
             }
+        }
+        // Gunakan helper ini agar seragam
+        private int GetShiftNumber(string name)
+        {
+            if (name.Contains("1")) return 1;
+            if (name.Contains("2")) return 2;
+            return 3;
         }
 
         // ─── HELPER A: SIMPAN DATA REALTIME (TETAP SAMA) ─────────────────────────
@@ -100,7 +104,6 @@ namespace MonitoringApp.Services
         }
 
         // ─── 2. FUNGSI REKAP HARIAN (SUMMARIZE) ──────────────────────────────────
-        // ─── MAIN METHOD: SUMMARIZE ALL MACHINES ─────────────────────────────────────
         public void SummarizeAllMachines(DateTime summaryDate)
         {
             using (var context = _contextFactory.CreateDbContext())
@@ -169,49 +172,6 @@ namespace MonitoringApp.Services
                     UptimePct = upPct,
                     DowntimePct = 100 - upPct,
                     TotalCount = (int)shiftData.PartHours
-                });
-            }
-        }
-
-        // ─── HELPER 2: CALCULATE DAILY TOTAL (DENGAN UPSERT) ────────────────────────
-        private void CalculateDailyTotalAndSave(AppDbContext context, int machineId, DateTime date, params MachineDataBase?[] shifts)
-        {
-            double totalUptimeSeconds = shifts.Sum(s => s?.Uptime.TotalSeconds ?? 0);
-            double totalDowntimeSeconds = shifts.Sum(s => s?.DataCh1.TotalSeconds ?? 0);
-            int totalProductionCount = (int)shifts.Sum(s => s?.PartHours ?? 0);
-
-            double grandTotalSeconds = totalUptimeSeconds + totalDowntimeSeconds;
-            int finalUptimePercent = 0;
-
-            if (grandTotalSeconds > 0)
-            {
-                finalUptimePercent = (int)Math.Round((totalUptimeSeconds / grandTotalSeconds) * 100);
-            }
-
-            // 🌟 PERBAIKAN 2: LOGIKA UPSERT UNTUK ALL DAY
-            var existingLog = context.DailyUptimeLogs.FirstOrDefault(x =>
-                x.MachineId == machineId &&
-                x.ShiftName == "ALL DAY" &&
-                x.LogDate.Date == date.Date);
-
-            if (existingLog != null)
-            {
-                // UPDATE
-                existingLog.UptimePct = finalUptimePercent;
-                existingLog.DowntimePct = 100 - finalUptimePercent;
-                existingLog.TotalCount = totalProductionCount;
-            }
-            else
-            {
-                // INSERT
-                context.DailyUptimeLogs.Add(new DailyUptimeLog
-                {
-                    MachineId = machineId,
-                    ShiftName = "ALL DAY",
-                    LogDate = date.Date,
-                    UptimePct = finalUptimePercent,
-                    DowntimePct = 100 - finalUptimePercent,
-                    TotalCount = totalProductionCount
                 });
             }
         }

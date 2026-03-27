@@ -28,6 +28,58 @@ namespace MonitoringApp.Pages
         private ObservableCollection<LineSummary> _dashboardCollection = new ObservableCollection<LineSummary>();
         private ObservableCollection<MachineDetailViewModel> _detailCollection = new ObservableCollection<MachineDetailViewModel>();
 
+        private bool _isFullScreen = false;
+        private WindowState _previousWindowState;
+        private WindowStyle _previousWindowStyle;
+        private ResizeMode _previousResizeMode;
+
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Jika tombol F11 ditekan, toggle (masuk/keluar) full screen
+            if (e.Key == Key.F11)
+            {
+                ToggleFullScreen();
+            }
+            // Jika tombol ESC ditekan dan sedang dalam mode full screen, maka keluar
+            else if (e.Key == Key.Escape && _isFullScreen)
+            {
+                ToggleFullScreen();
+            }
+        }
+
+        private void ToggleFullScreen()
+        {
+            if (!_isFullScreen)
+            {
+                // -- MASUK FULL SCREEN --
+                // 1. Simpan status jendela saat ini agar bisa dikembalikan nanti
+                _previousWindowState = this.WindowState;
+                _previousWindowStyle = this.WindowStyle;
+                _previousResizeMode = this.ResizeMode;
+
+                // 2. Hilangkan border dan tombol close/minimize/maximize
+                this.WindowStyle = WindowStyle.None;
+                this.ResizeMode = ResizeMode.NoResize;
+
+                // 3. Trik WPF: Ubah ke Normal dulu, baru Maximized agar Taskbar Windows benar-benar tertutup
+                this.WindowState = WindowState.Normal;
+                this.WindowState = WindowState.Maximized;
+
+                _isFullScreen = true;
+            }
+            else
+            {
+                // -- KELUAR FULL SCREEN --
+                // Kembalikan semua pengaturan seperti semula
+                this.WindowStyle = _previousWindowStyle;
+                this.ResizeMode = _previousResizeMode;
+                this.WindowState = _previousWindowState;
+
+                _isFullScreen = false;
+            }
+        }
+
         // Constructor Berubah: Terima Factory, bukan Service langsung
         public MainWindow(string role, IServiceScopeFactory scopeFactory, CsvLogService csvService)
         {
@@ -320,13 +372,13 @@ namespace MonitoringApp.Pages
             if (sender is FrameworkElement element && element.DataContext is MachineDetailViewModel clickedMachine)
             {
                 // 1. Tutup semua kartu lain
-                foreach (var machine in _detailCollection)
-                {
-                    if (machine != clickedMachine)
-                    {
-                        machine.IsExpanded = false;
-                    }
-                }
+                //foreach (var machine in _detailCollection)
+                //{
+                //    if (machine != clickedMachine)
+                //    {
+                //        machine.IsExpanded = false;
+                //    }
+                //}
 
                 if (!clickedMachine.IsExpanded)
                 {

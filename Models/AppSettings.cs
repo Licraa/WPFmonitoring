@@ -5,6 +5,7 @@
         // Pastikan kelas ConnectionStrings didefinisikan di bawah atau di file yang sama
         public ConnectionStrings ConnectionStrings { get; set; } = new();
         public List<ShiftItem> ShiftSettings { get; set; } = new();
+        public List<ShiftItem> SaturdayShiftSettings { get; set; } = new();
     }
 
     public class ConnectionStrings
