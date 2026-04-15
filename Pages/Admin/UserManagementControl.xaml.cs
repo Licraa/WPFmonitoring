@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Extensions.DependencyInjection; // Wajib untuk DI
+using Microsoft.Extensions.DependencyInjection; 
 using MonitoringApp.Services;
 
 namespace MonitoringApp.Pages

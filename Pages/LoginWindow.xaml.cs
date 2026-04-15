@@ -46,8 +46,9 @@ namespace MonitoringApp.Pages
             {
                 var scopeFactory = App.ServiceProvider.GetRequiredService<IServiceScopeFactory>();
                 var csvService = App.ServiceProvider.GetRequiredService<CsvLogService>();
+                var serialService = App.ServiceProvider.GetRequiredService<SerialPortService>();
 
-                var mainWin = new MainWindow(role, scopeFactory, csvService);
+                var mainWin = new MainWindow(role, scopeFactory, csvService, serialService);
                 mainWin.Show();
 
                 this.Close();

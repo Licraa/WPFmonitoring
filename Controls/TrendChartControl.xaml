@@ -51,27 +51,27 @@
             <UniformGrid Grid.Column="0" Columns="4" Margin="0,0,20,0">
                 <Border Background="#F0FDF4" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#BBF7D0" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Rata-rata Uptime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock Text="Average Uptime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                             <TextBlock x:Name="TxtAvgUp" Text="74%" FontSize="24" FontWeight="Bold" Foreground="#166534"/>
-                            <TextBlock x:Name="TxtAvgUpSub" Text=" (7 hari)" FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
+                            <TextBlock x:Name="TxtAvgUpSub"  FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <Border Background="#FFF1F2" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#FECDD3" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Rata-rata Downtime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock Text="Average Downtime" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
                             <TextBlock x:Name="TxtAvgDown" Text="26%" FontSize="24" FontWeight="Bold" Foreground="#991B1B"/>
-                            <TextBlock x:Name="TxtAvgDownSub" Text=" (7 hari)" FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
+                            <TextBlock x:Name="TxtAvgDownSub"  FontSize="10" Foreground="#6B7280" Margin="4,0,0,5" VerticalAlignment="Bottom"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <Border Background="#F0FDF4" CornerRadius="10" Padding="12,10" Margin="0,0,8,0" BorderBrush="#BBF7D0" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Hari Terbaik" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock Text="Best Day" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
                         <TextBlock x:Name="TxtBestDay" Text="Fri 20/03" FontSize="14" FontWeight="Bold" Foreground="#1A1A2E"/>
                         <TextBlock x:Name="TxtBestVal" Text="▲ Uptime 90%" FontSize="10" Foreground="#166534" FontWeight="SemiBold"/>
                     </StackPanel>
@@ -79,7 +79,7 @@
 
                 <Border Background="#FFF1F2" CornerRadius="10" Padding="12,10" BorderBrush="#FECDD3" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Hari Terburuk" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
+                        <TextBlock Text="Worst Day" FontSize="11" Foreground="#6B7280" Margin="0,0,0,4"/>
                         <TextBlock x:Name="TxtWorstDay" Text="Sun 22/03" FontSize="14" FontWeight="Bold" Foreground="#1A1A2E"/>
                         <TextBlock x:Name="TxtWorstVal" Text="▼ Uptime 45%" FontSize="10" Foreground="#991B1B" FontWeight="SemiBold"/>
                     </StackPanel>
@@ -88,7 +88,7 @@
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <StackPanel Margin="0,0,12,0">
-                    <TextBlock Text="Pilih Shift" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
+                    <TextBlock Text="Select Shift" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
                     <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="2">
                         <ComboBox Width="110" Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalContentAlignment="Center"
                           SelectedValue="{Binding SelectedTrendShift}" SelectedValuePath="Content">
@@ -100,13 +100,13 @@
                 </StackPanel>
 
                 <StackPanel>
-                    <TextBlock Text="Durasi" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
+                    <TextBlock Text="Duration" FontSize="10" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="2,0,0,4"/>
                     <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="8" Padding="2">
                         <ComboBox x:Name="CmbTrendDays" Width="95" Background="Transparent" BorderThickness="0" Cursor="Hand" VerticalContentAlignment="Center"
                           SelectionChanged="CmbTrendDays_SelectionChanged">
-                            <ComboBoxItem Content="7 Hari" Tag="7" IsSelected="True"/>
-                            <ComboBoxItem Content="14 Hari" Tag="14"/>
-                            <ComboBoxItem Content="30 Hari" Tag="30"/>
+                            <ComboBoxItem Content="7 Day" Tag="7" IsSelected="True"/>
+                            <ComboBoxItem Content="14 Day" Tag="14"/>
+                            <ComboBoxItem Content="30 Day" Tag="30"/>
                         </ComboBox>
                     </Border>
                 </StackPanel>

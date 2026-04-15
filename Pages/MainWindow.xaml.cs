@@ -1,15 +1,16 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection; // WAJIB
+using MonitoringApp.Controls;
+using MonitoringApp.Services;
+using MonitoringApp.ViewModels;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
-using Microsoft.Extensions.DependencyInjection; // WAJIB
-using MonitoringApp.Services;
-using MonitoringApp.ViewModels;
-
 using AdminWindow = MonitoringApp.Pages.Admin;
 
 namespace MonitoringApp.Pages
@@ -20,6 +21,7 @@ namespace MonitoringApp.Pages
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly CsvLogService _csvService;
         private readonly string _userRole;
+        private readonly SerialPortService _serialService;
 
         private string? _selectedLine;
         private DispatcherTimer _refreshTimer;
@@ -32,6 +34,8 @@ namespace MonitoringApp.Pages
         private WindowState _previousWindowState;
         private WindowStyle _previousWindowStyle;
         private ResizeMode _previousResizeMode;
+
+        private bool _lastPortState = false;
 
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -81,13 +85,14 @@ namespace MonitoringApp.Pages
         }
 
         // Constructor Berubah: Terima Factory, bukan Service langsung
-        public MainWindow(string role, IServiceScopeFactory scopeFactory, CsvLogService csvService)
+        public MainWindow(string role, IServiceScopeFactory scopeFactory, CsvLogService csvService, SerialPortService serialService)
         {
             InitializeComponent();
 
             _userRole = role;
             _scopeFactory = scopeFactory; // Simpan Factory
             _csvService = csvService;
+            _serialService = serialService;
 
             ConfigureAccessControl();
 
@@ -101,6 +106,7 @@ namespace MonitoringApp.Pages
             ShowDashboard();
 
             _refreshTimer.Start();
+            
         }
 
         private void ConfigureAccessControl()
@@ -112,7 +118,7 @@ namespace MonitoringApp.Pages
             }
         }
 
-     
+
 
         private async void RefreshTimer_Tick(object? sender, EventArgs e)
         {
@@ -137,6 +143,20 @@ namespace MonitoringApp.Pages
             finally
             {
                 _isUpdating = false;
+
+                // ✨ PENGECEKAN ANTI-GAGAL SETIAP DETIK ✨
+                if (_serialService != null)
+                {
+                    bool currentState = _serialService.IsRunning;
+
+                    // Hanya update warna UI JIKA statusnya benar-benar berubah 
+                    // (Agar animasi kedip tidak kerestart tiap detik)
+                    if (currentState != _lastPortState)
+                    {
+                        _lastPortState = currentState;
+                        UpdatePortStatusUI(currentState);
+                    }
+                }
             }
         }
 
@@ -412,6 +432,33 @@ namespace MonitoringApp.Pages
                     clickedMachine.IsExpanded = false;
                 }
             }
+        }
+        private void SerialService_ConnectionStatusChanged(object? sender, string status)
+        {
+            // Event ini otomatis terpanggil saat port terbuka (Start) atau tertutup (Stop)
+            UpdatePortStatusUI(_serialService.IsRunning);
+        }
+
+        private void UpdatePortStatusUI(bool isActive)
+        {
+            Dispatcher.Invoke(() => {
+                // Ambil animasi kedip dari XAML Resources
+                var sb = (System.Windows.Media.Animation.Storyboard)this.Resources["BlinkAnimation"];
+
+                if (isActive)
+                {
+                    // Port Aktif: Ubah warna jadi HIJAU (#00FF00) dan mulai animasi berkedip
+                    DetailPortIndicator.Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 0));
+                    sb.Begin(DetailPortIndicator, true);
+                }
+                else
+                {
+                    // Port Mati: Hentikan animasi, pastikan terang sepenuhnya, ubah jadi MERAH (#FF0000)
+                    sb.Stop(DetailPortIndicator);
+                    DetailPortIndicator.Opacity = 1.0;
+                    DetailPortIndicator.Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 0, 0));
+                }
+            });
         }
 
         private void AppHeader_Loaded(object sender, RoutedEventArgs e)

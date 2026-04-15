@@ -317,9 +317,9 @@ namespace MonitoringApp.Controls
             var worst = data.MinBy(d => d.UptimePercent)!;
 
             TxtAvgUp.Text = avgUp + "%";
-            TxtAvgUpSub.Text = $"dari {data.Count} hari";
+            TxtAvgUpSub.Text = $"Last {data.Count} Days";
             TxtAvgDown.Text = (100 - avgUp) + "%";
-            TxtAvgDownSub.Text = $"dari {data.Count} hari";
+            TxtAvgDownSub.Text = $"Last {data.Count} Days";
 
             TxtBestDay.Text = best.DateLabelFull;
             TxtBestVal.Text = $"▲ Uptime {best.UptimePercent}%";
