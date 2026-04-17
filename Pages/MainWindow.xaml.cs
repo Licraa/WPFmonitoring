@@ -401,28 +401,6 @@ namespace MonitoringApp.Pages
         {
             if (sender is FrameworkElement element && element.DataContext is MachineDetailViewModel clickedMachine)
             {
-                // 1. TUTUP KARTU LAIN YANG SEDANG MEKAR (Jika ada)
-                bool isAnyOtherCardClosing = false;
-                foreach (var machine in _detailCollection)
-                {
-                    if (machine != clickedMachine && machine.IsExpanded)
-                    {
-                        machine.AllowAnimation = true;
-                        machine.IsExpanded = false;
-                        isAnyOtherCardClosing = true;
-
-                        // Matikan saklar animasi di background setelah selesai mengecil
-                        _ = Task.Delay(300).ContinueWith(t => machine.AllowAnimation = false);
-                    }
-                }
-
-                // Jika ada kartu yang ditutup, tunggu sampai animasinya selesai mengecil sepenuhnya
-                // Ini memastikan pergeseran layout tidak bertabrakan!
-                if (isAnyOtherCardClosing)
-                {
-                    await Task.Delay(300);
-                    RefreshPageItems();
-                }
 
                 if (!clickedMachine.IsExpanded)
                 {
@@ -435,8 +413,8 @@ namespace MonitoringApp.Pages
 
                         for (int i = 0; i <= clickedPageIndex; i++)
                         {
-                            int size = _pagedCollection[i].IsExpanded ? 3 : 1;
-                            if (tempSum + size > 3)
+                            int size = _pagedCollection[i].IsExpanded ? 4 : 1;
+                            if (tempSum + size > 4)
                             {
                                 targetPagedIndex = i;
                                 tempSum = 0;
@@ -455,30 +433,21 @@ namespace MonitoringApp.Pages
                             {
                                 _detailCollection.Move(globalCurrentIndex, globalTargetIndex);
                                 RefreshPageItems();
-                                await Task.Delay(350); // Tunggu kartu meluncur ke kiri
+                                await Task.Delay(400); // Tunggu kartu meluncur selesai
                             }
                         }
                     }
 
-                    // 2. NYALAKAN ANIMASI & MEKAR
                     clickedMachine.AllowAnimation = true;
-                    clickedMachine.IsExpanded = true;
-
-                    // Panggil refresh agar sisa kartu terdorong ke bawah / Page 2 secara smooth
+                    clickedMachine.IsExpanded = true;                
                     RefreshPageItems();
                 }
+                
                 else
                 {
-                    // 3. TUTUP KARTU (Proses yang sebelumnya Buggy)
                     clickedMachine.AllowAnimation = true;
-                    clickedMachine.IsExpanded = false;
-
-                    // RAHASIA FIX: JANGAN PANGGIL RefreshPageItems() DISINI!
-                    // Biarkan WrapPanel bereaksi terhadap kartu yang menyusut dan menganimasi 
-                    // kartu lain secara natural untuk mengisi celah.
-                    await Task.Delay(300);
-
-                    // SETELAH kartu mengecil sempurna, barulah refresh untuk menarik sisa kartu dari Page 2
+                    clickedMachine.IsExpanded = false;               
+                    await Task.Delay(100);                   
                     RefreshPageItems();
                     clickedMachine.AllowAnimation = false;
                 }
