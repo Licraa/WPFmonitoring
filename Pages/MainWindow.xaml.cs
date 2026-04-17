@@ -37,6 +37,14 @@ namespace MonitoringApp.Pages
 
         private bool _lastPortState = false;
 
+        private ObservableCollection<MachineDetailViewModel> _pagedCollection = new ObservableCollection<MachineDetailViewModel>();
+        private int _currentPage = 1;
+        private int _itemsPerPage = 6; // Sesuaikan angka ini dengan berapa card yang muat di satu layar (misal 6 atau 8)
+        private DispatcherTimer _slideshowTimer;
+        private bool _isAnimating = false; // Mencegah user spam klik saat animasi berjalan
+
+        private List<List<MachineDetailViewModel>> _pages = new List<List<MachineDetailViewModel>>();
+
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
@@ -97,7 +105,11 @@ namespace MonitoringApp.Pages
             ConfigureAccessControl();
 
             cardContainer.ItemsSource = _dashboardCollection;
-            mesinListView.ItemsSource = _detailCollection;
+            mesinListView.ItemsSource = _pagedCollection;
+
+            _slideshowTimer = new DispatcherTimer();
+            _slideshowTimer.Interval = TimeSpan.FromSeconds(10);
+            _slideshowTimer.Tick += SlideshowTimer_Tick;
 
             _refreshTimer = new DispatcherTimer();
             _refreshTimer.Interval = TimeSpan.FromSeconds(1);
@@ -117,8 +129,6 @@ namespace MonitoringApp.Pages
                     adminItem.Visibility = Visibility.Collapsed;
             }
         }
-
-
 
         private async void RefreshTimer_Tick(object? sender, EventArgs e)
         {
@@ -270,6 +280,7 @@ namespace MonitoringApp.Pages
                 }
 
                 DetailPanel.DataContext = new { Active = active, Inactive = inactive, TotalMachine = _detailCollection.Count, Line = _selectedLine };
+                RefreshPageItems();
             }
         }
 
@@ -391,7 +402,8 @@ namespace MonitoringApp.Pages
         {
             if (sender is FrameworkElement element && element.DataContext is MachineDetailViewModel clickedMachine)
             {
-                // 1. Tutup semua kartu lain
+                // 1. Tutup semua kartu lain (Saya biarkan di-comment sesuai aslinya, 
+                // tapi kalau mau halaman tidak kepenuhan, ini bisa di-uncomment)
                 //foreach (var machine in _detailCollection)
                 //{
                 //    if (machine != clickedMachine)
@@ -402,41 +414,59 @@ namespace MonitoringApp.Pages
 
                 if (!clickedMachine.IsExpanded)
                 {
-                    int currentIndex = _detailCollection.IndexOf(clickedMachine);
+                    int clickedPageIndex = _pagedCollection.IndexOf(clickedMachine);
 
-                    // Hitung target posisi ke paling kiri di barisnya
-                    double cardTotalWidth = 410.0;
-                    double containerWidth = mesinListView.ActualWidth;
-                    int cardsPerRow = (int)(containerWidth / cardTotalWidth);
-                    if (cardsPerRow <= 0) cardsPerRow = 1;
-
-                    int rowIndex = currentIndex / cardsPerRow;
-                    int targetIndex = rowIndex * cardsPerRow;
-
-                    // Jika kartu BUKAN di posisi paling kiri
-                    if (currentIndex != targetIndex)
+                    if (clickedPageIndex != -1)
                     {
-                        // Pindahkan kartu. XAML akan merespons ini dengan meluncurkannya secara smooth!
-                        _detailCollection.Move(currentIndex, targetIndex);
+                        // CARI TARGET: Item pertama di baris tempat kartu berada
+                        int tempSum = 0;
+                        int targetPagedIndex = 0; // Default awal baris 1
 
-                        // TUNGGU KARTU SELESAI MELUNCUR (sesuaikan dengan Duration di XAML)
-                        await Task.Delay(350);
+                        for (int i = 0; i <= clickedPageIndex; i++)
+                        {
+                            int size = _pagedCollection[i].IsExpanded ? 4 : 1;
+                            // Jika menambah item ini membuat baris melebihi 3 slot, 
+                            // berarti item ini adalah awal dari baris baru (Baris 2)
+                            if (tempSum + size > 4)
+                            {
+                                targetPagedIndex = i;
+                                tempSum = 0;
+                            }
+                            tempSum += size;
+                        }
+
+                        var targetMachineOnCurrentRow = _pagedCollection[targetPagedIndex];
+
+                        // Jika kartu belum di posisi paling kiri di barisnya
+                        if (clickedMachine != targetMachineOnCurrentRow)
+                        {
+                            int globalCurrentIndex = _detailCollection.IndexOf(clickedMachine);
+                            int globalTargetIndex = _detailCollection.IndexOf(targetMachineOnCurrentRow);
+
+                            if (globalCurrentIndex != -1 && globalTargetIndex != -1)
+                            {
+                                // Pindahkan posisi kartu di koleksi utama
+                                _detailCollection.Move(globalCurrentIndex, globalTargetIndex);
+
+                                // Trigger animasi geser (FluidMoveBehavior)
+                                RefreshPageItems();
+
+                                // Tunggu animasi meluncur selesai
+                                await Task.Delay(350);
+                            }
+                        }
                     }
 
-                    // Setelah kartu sampai dan stabil, baru mekarkan grafiknya
+                    // Setelah sampai di posisi kiri barisnya, baru mekarkan
                     clickedMachine.IsExpanded = true;
+                    RefreshPageItems();
                 }
                 else
                 {
-                    // Jika diklik lagi untuk menutup
                     clickedMachine.IsExpanded = false;
+                    RefreshPageItems();
                 }
             }
-        }
-        private void SerialService_ConnectionStatusChanged(object? sender, string status)
-        {
-            // Event ini otomatis terpanggil saat port terbuka (Start) atau tertutup (Stop)
-            UpdatePortStatusUI(_serialService.IsRunning);
         }
 
         private void UpdatePortStatusUI(bool isActive)
@@ -461,6 +491,171 @@ namespace MonitoringApp.Pages
             });
         }
 
+        private async Task AnimateSlide(double slideOutTargetX, double slideInStartX)
+        {
+            if (_isAnimating) return;
+            _isAnimating = true;
+
+            // 1. Animasi keluar layar
+            var slideOut = new System.Windows.Media.Animation.DoubleAnimation(
+                slideOutTargetX, TimeSpan.FromMilliseconds(300))
+            { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn } };
+
+            PageSlideTransform.BeginAnimation(TranslateTransform.XProperty, slideOut);
+            await Task.Delay(300);
+
+            // 2. Ganti Data saat Card sedang di luar layar
+            RefreshPageItems();
+
+            // 3. Pindahkan posisi mulai ke ujung layar sebaliknya
+            PageSlideTransform.X = slideInStartX;
+
+            // 4. Animasi masuk kembali ke tengah layar (X = 0)
+            var slideIn = new System.Windows.Media.Animation.DoubleAnimation(
+                0, TimeSpan.FromMilliseconds(300))
+            { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } };
+
+            PageSlideTransform.BeginAnimation(TranslateTransform.XProperty, slideIn);
+            await Task.Delay(300);
+
+            _isAnimating = false;
+        }
+
+        private async void BtnNextPage_Click(object sender, RoutedEventArgs e)
+        {
+            // Gunakan jumlah halaman dinamis dari hasil kalkulasi
+            int totalPages = _pages.Count > 0 ? _pages.Count : 1;
+
+            if (_currentPage >= totalPages || _isAnimating) return;
+
+            _currentPage++;
+            await AnimateSlide(-2000, 2000); // Slide ke kiri, masuk dari kanan
+        }
+
+        private async void BtnPrevPage_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentPage <= 1 || _isAnimating) return;
+
+            _currentPage--;
+            await AnimateSlide(2000, -2000); // Slide ke kanan, masuk dari kiri
+        }
+
+        private void ToggleSlideshow_Click(object sender, RoutedEventArgs e)
+        {
+            if (ToggleSlideshow.IsChecked == true)
+            {
+                ToggleSlideshow.Content = "⏸ Pause Auto Play";
+                ToggleSlideshow.Background = new SolidColorBrush(Color.FromRgb(198, 40, 40)); // Warna merah
+                _slideshowTimer.Start();
+            }
+            else
+            {
+                ToggleSlideshow.Content = "▶ Auto Play";
+                ToggleSlideshow.Background = new SolidColorBrush(Color.FromRgb(46, 125, 50)); // Warna hijau
+                _slideshowTimer.Stop();
+            }
+        }
+
+        private async void SlideshowTimer_Tick(object? sender, EventArgs e)
+        {
+            int totalPages = (int)Math.Ceiling((double)_detailCollection.Count / _itemsPerPage);
+
+            if (_currentPage >= totalPages)
+            {
+                // Jika sudah di akhir, kembali ke awal
+                _currentPage = 1;
+            }
+            else
+            {
+                _currentPage++;
+            }
+
+            await AnimateSlide(-2000, 2000);
+        }
+
+        private void CalculatePages()
+        {
+            _pages.Clear();
+            // Salin data ke list sementara untuk diproses (Packing)
+            var remainingCards = _detailCollection.ToList();
+            const int maxColsPerRow = 4;
+            const int maxRowsPerPage = 2;
+
+            while (remainingCards.Count > 0)
+            {
+                var currentPageItems = new List<MachineDetailViewModel>();
+
+                for (int row = 0; row < maxRowsPerPage; row++)
+                {
+                    int filledCols = 0;
+                    // Coba isi 3 slot di baris ini
+                    while (filledCols < maxColsPerRow)
+                    {
+                        int spaceLeft = maxColsPerRow - filledCols;
+
+                        // CARI: kartu pertama di daftar sisa yang ukurannya MUAT di sisa space baris ini
+                        var fitCard = remainingCards.FirstOrDefault(c => (c.IsExpanded ? 4 : 1) <= spaceLeft);
+
+                        if (fitCard != null)
+                        {
+                            currentPageItems.Add(fitCard);
+                            filledCols += (fitCard.IsExpanded ? 4 : 1);
+                            remainingCards.Remove(fitCard); // Hapus dari daftar tunggu karena sudah masuk halaman
+                        }
+                        else
+                        {
+                            // Tidak ada lagi kartu yang muat di sisa baris ini (celah tidak bisa diisi lagi)
+                            break;
+                        }
+                    }
+                    if (remainingCards.Count == 0) break;
+                }
+                _pages.Add(currentPageItems);
+            }
+        }
+
+        private void RefreshPageItems()
+        {
+            CalculatePages();
+
+            int totalPages = _pages.Count == 0 ? 1 : _pages.Count;
+            if (_currentPage > totalPages) _currentPage = totalPages;
+            if (_currentPage < 1) _currentPage = 1;
+
+            PageIndicatorText.Text = $"Page {_currentPage} of {totalPages}";
+
+            var targetPageItems = _pages.Count > 0 ? _pages[_currentPage - 1] : new List<MachineDetailViewModel>();
+
+            // SMART SYNC: Geser index agar FluidMoveBehavior WPF bisa menganimasi pergerakan ke kanan/bawah
+            for (int i = 0; i < targetPageItems.Count; i++)
+            {
+                if (i < _pagedCollection.Count)
+                {
+                    if (_pagedCollection[i] != targetPageItems[i])
+                    {
+                        int oldIndex = _pagedCollection.IndexOf(targetPageItems[i]);
+                        if (oldIndex != -1)
+                        {
+                            _pagedCollection.Move(oldIndex, i); // Memicu animasi geser
+                        }
+                        else
+                        {
+                            _pagedCollection.Insert(i, targetPageItems[i]); // Memicu animasi masuk dari kiri/bawah
+                        }
+                    }
+                }
+                else
+                {
+                    _pagedCollection.Add(targetPageItems[i]);
+                }
+            }
+
+            // Buang item sisa (yang tumpah ke page selanjutnya)
+            while (_pagedCollection.Count > targetPageItems.Count)
+            {
+                _pagedCollection.RemoveAt(_pagedCollection.Count - 1);
+            }
+        }
         private void AppHeader_Loaded(object sender, RoutedEventArgs e)
         {
 

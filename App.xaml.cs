@@ -75,6 +75,8 @@ namespace MonitoringApp
                 services.AddSingleton<CsvLogService>();
                 services.AddSingleton<DataProcessingService>();
 
+                services.AddSingleton<SerialPortService>();
+
                 // Transient Services (Dibuat baru setiap kali dipanggil)
                 services.AddTransient<MachineService>();
                 services.AddTransient<SummaryService>();
