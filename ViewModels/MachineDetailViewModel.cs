@@ -166,6 +166,20 @@ namespace MonitoringApp.ViewModels
             ShowShiftCommand = new RelayCommand(_ => ShowTrend = false);
             ShowTrendCommand = new RelayCommand(_ => ShowTrend = true);
         }
+
+        private bool _allowAnimation;
+        public bool AllowAnimation
+        {
+            get { return _allowAnimation; }
+            set
+            {
+                if (_allowAnimation != value)
+                {
+                    _allowAnimation = value;
+                    OnPropertyChanged(nameof(AllowAnimation));
+                }
+            }
+        }
     }
     public class ShiftSummaryViewModel : ViewModelBase
     {

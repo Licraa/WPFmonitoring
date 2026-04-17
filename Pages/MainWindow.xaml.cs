@@ -45,7 +45,6 @@ namespace MonitoringApp.Pages
 
         private List<List<MachineDetailViewModel>> _pages = new List<List<MachineDetailViewModel>>();
 
-
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             // Jika tombol F11 ditekan, toggle (masuk/keluar) full screen
@@ -402,15 +401,28 @@ namespace MonitoringApp.Pages
         {
             if (sender is FrameworkElement element && element.DataContext is MachineDetailViewModel clickedMachine)
             {
-                // 1. Tutup semua kartu lain (Saya biarkan di-comment sesuai aslinya, 
-                // tapi kalau mau halaman tidak kepenuhan, ini bisa di-uncomment)
-                //foreach (var machine in _detailCollection)
-                //{
-                //    if (machine != clickedMachine)
-                //    {
-                //        machine.IsExpanded = false;
-                //    }
-                //}
+                // 1. TUTUP KARTU LAIN YANG SEDANG MEKAR (Jika ada)
+                bool isAnyOtherCardClosing = false;
+                foreach (var machine in _detailCollection)
+                {
+                    if (machine != clickedMachine && machine.IsExpanded)
+                    {
+                        machine.AllowAnimation = true;
+                        machine.IsExpanded = false;
+                        isAnyOtherCardClosing = true;
+
+                        // Matikan saklar animasi di background setelah selesai mengecil
+                        _ = Task.Delay(300).ContinueWith(t => machine.AllowAnimation = false);
+                    }
+                }
+
+                // Jika ada kartu yang ditutup, tunggu sampai animasinya selesai mengecil sepenuhnya
+                // Ini memastikan pergeseran layout tidak bertabrakan!
+                if (isAnyOtherCardClosing)
+                {
+                    await Task.Delay(300);
+                    RefreshPageItems();
+                }
 
                 if (!clickedMachine.IsExpanded)
                 {
@@ -418,16 +430,13 @@ namespace MonitoringApp.Pages
 
                     if (clickedPageIndex != -1)
                     {
-                        // CARI TARGET: Item pertama di baris tempat kartu berada
                         int tempSum = 0;
-                        int targetPagedIndex = 0; // Default awal baris 1
+                        int targetPagedIndex = 0;
 
                         for (int i = 0; i <= clickedPageIndex; i++)
                         {
-                            int size = _pagedCollection[i].IsExpanded ? 4 : 1;
-                            // Jika menambah item ini membuat baris melebihi 3 slot, 
-                            // berarti item ini adalah awal dari baris baru (Baris 2)
-                            if (tempSum + size > 4)
+                            int size = _pagedCollection[i].IsExpanded ? 3 : 1;
+                            if (tempSum + size > 3)
                             {
                                 targetPagedIndex = i;
                                 tempSum = 0;
@@ -437,7 +446,6 @@ namespace MonitoringApp.Pages
 
                         var targetMachineOnCurrentRow = _pagedCollection[targetPagedIndex];
 
-                        // Jika kartu belum di posisi paling kiri di barisnya
                         if (clickedMachine != targetMachineOnCurrentRow)
                         {
                             int globalCurrentIndex = _detailCollection.IndexOf(clickedMachine);
@@ -445,26 +453,34 @@ namespace MonitoringApp.Pages
 
                             if (globalCurrentIndex != -1 && globalTargetIndex != -1)
                             {
-                                // Pindahkan posisi kartu di koleksi utama
                                 _detailCollection.Move(globalCurrentIndex, globalTargetIndex);
-
-                                // Trigger animasi geser (FluidMoveBehavior)
                                 RefreshPageItems();
-
-                                // Tunggu animasi meluncur selesai
-                                await Task.Delay(350);
+                                await Task.Delay(350); // Tunggu kartu meluncur ke kiri
                             }
                         }
                     }
 
-                    // Setelah sampai di posisi kiri barisnya, baru mekarkan
+                    // 2. NYALAKAN ANIMASI & MEKAR
+                    clickedMachine.AllowAnimation = true;
                     clickedMachine.IsExpanded = true;
+
+                    // Panggil refresh agar sisa kartu terdorong ke bawah / Page 2 secara smooth
                     RefreshPageItems();
                 }
                 else
                 {
+                    // 3. TUTUP KARTU (Proses yang sebelumnya Buggy)
+                    clickedMachine.AllowAnimation = true;
                     clickedMachine.IsExpanded = false;
+
+                    // RAHASIA FIX: JANGAN PANGGIL RefreshPageItems() DISINI!
+                    // Biarkan WrapPanel bereaksi terhadap kartu yang menyusut dan menganimasi 
+                    // kartu lain secara natural untuk mengisi celah.
+                    await Task.Delay(300);
+
+                    // SETELAH kartu mengecil sempurna, barulah refresh untuk menarik sisa kartu dari Page 2
                     RefreshPageItems();
+                    clickedMachine.AllowAnimation = false;
                 }
             }
         }
@@ -476,14 +492,12 @@ namespace MonitoringApp.Pages
                 var sb = (System.Windows.Media.Animation.Storyboard)this.Resources["BlinkAnimation"];
 
                 if (isActive)
-                {
-                    // Port Aktif: Ubah warna jadi HIJAU (#00FF00) dan mulai animasi berkedip
+                {                
                     DetailPortIndicator.Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 0));
                     sb.Begin(DetailPortIndicator, true);
                 }
                 else
-                {
-                    // Port Mati: Hentikan animasi, pastikan terang sepenuhnya, ubah jadi MERAH (#FF0000)
+                {                   
                     sb.Stop(DetailPortIndicator);
                     DetailPortIndicator.Opacity = 1.0;
                     DetailPortIndicator.Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 0, 0));
@@ -520,6 +534,15 @@ namespace MonitoringApp.Pages
 
             _isAnimating = false;
         }
+        private void DisableAllAnimations()
+        {
+            // MATIKAN IZIN ANIMASI agar saat kembali ke halaman ini, WPF menampilkan ukuran 1200px secara instan.
+            // KITA TIDAK MENGUBAH IsExpanded = false, agar status mekarnya tetap terjaga!
+            foreach (var machine in _detailCollection)
+            {
+                machine.AllowAnimation = false;
+            }
+        }
 
         private async void BtnNextPage_Click(object sender, RoutedEventArgs e)
         {
@@ -528,6 +551,8 @@ namespace MonitoringApp.Pages
 
             if (_currentPage >= totalPages || _isAnimating) return;
 
+            DisableAllAnimations();
+
             _currentPage++;
             await AnimateSlide(-2000, 2000); // Slide ke kiri, masuk dari kanan
         }
@@ -535,6 +560,8 @@ namespace MonitoringApp.Pages
         private async void BtnPrevPage_Click(object sender, RoutedEventArgs e)
         {
             if (_currentPage <= 1 || _isAnimating) return;
+
+            DisableAllAnimations();
 
             _currentPage--;
             await AnimateSlide(2000, -2000); // Slide ke kanan, masuk dari kiri
@@ -558,17 +585,25 @@ namespace MonitoringApp.Pages
 
         private async void SlideshowTimer_Tick(object? sender, EventArgs e)
         {
-            int totalPages = (int)Math.Ceiling((double)_detailCollection.Count / _itemsPerPage);
+            // 1. WAJIB: Hitung ulang jumlah halaman terbaru (antisipasi jika ada kartu dihapus)
+            CalculatePages();
+            int totalPages = _pages.Count > 0 ? _pages.Count : 1;
 
-            if (_currentPage >= totalPages)
+            // 2. CEGAH BUG: Jika kartu yang tersisa hanya muat di 1 halaman, BATALKAN animasi geser
+            if (totalPages <= 1)
             {
-                // Jika sudah di akhir, kembali ke awal
                 _currentPage = 1;
+                RefreshPageItems(); // Tetap sinkronkan data tanpa animasi
+                return;
             }
+
+            // 3. Logika siklus Auto Play normal
+            if (_currentPage >= totalPages)
+                _currentPage = 1;
             else
-            {
                 _currentPage++;
-            }
+
+            DisableAllAnimations();
 
             await AnimateSlide(-2000, 2000);
         }
@@ -588,23 +623,19 @@ namespace MonitoringApp.Pages
                 for (int row = 0; row < maxRowsPerPage; row++)
                 {
                     int filledCols = 0;
-                    // Coba isi 3 slot di baris ini
                     while (filledCols < maxColsPerRow)
                     {
                         int spaceLeft = maxColsPerRow - filledCols;
-
-                        // CARI: kartu pertama di daftar sisa yang ukurannya MUAT di sisa space baris ini
                         var fitCard = remainingCards.FirstOrDefault(c => (c.IsExpanded ? 4 : 1) <= spaceLeft);
 
                         if (fitCard != null)
                         {
                             currentPageItems.Add(fitCard);
                             filledCols += (fitCard.IsExpanded ? 4 : 1);
-                            remainingCards.Remove(fitCard); // Hapus dari daftar tunggu karena sudah masuk halaman
+                            remainingCards.Remove(fitCard);
                         }
                         else
                         {
-                            // Tidak ada lagi kartu yang muat di sisa baris ini (celah tidak bisa diisi lagi)
                             break;
                         }
                     }
