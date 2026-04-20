@@ -39,9 +39,12 @@ namespace MonitoringApp.Pages
 
         private ObservableCollection<MachineDetailViewModel> _pagedCollection = new ObservableCollection<MachineDetailViewModel>();
         private int _currentPage = 1;
-        private int _itemsPerPage = 6; // Sesuaikan angka ini dengan berapa card yang muat di satu layar (misal 6 atau 8)
-        private DispatcherTimer _slideshowTimer;
-        private bool _isAnimating = false; // Mencegah user spam klik saat animasi berjalan
+
+        private bool _isAnimating = false; 
+        private bool _isTransitioningCard = false;
+        private DispatcherTimer _pageSlideshowTimer;
+
+        private bool _isAllExpanded = false;
 
         private List<List<MachineDetailViewModel>> _pages = new List<List<MachineDetailViewModel>>();
 
@@ -106,13 +109,14 @@ namespace MonitoringApp.Pages
             cardContainer.ItemsSource = _dashboardCollection;
             mesinListView.ItemsSource = _pagedCollection;
 
-            _slideshowTimer = new DispatcherTimer();
-            _slideshowTimer.Interval = TimeSpan.FromSeconds(10);
-            _slideshowTimer.Tick += SlideshowTimer_Tick;
-
             _refreshTimer = new DispatcherTimer();
             _refreshTimer.Interval = TimeSpan.FromSeconds(1);
             _refreshTimer.Tick += RefreshTimer_Tick;
+
+            // Timer untuk Page (10 Detik)
+            _pageSlideshowTimer = new DispatcherTimer();
+            _pageSlideshowTimer.Interval = TimeSpan.FromSeconds(10);
+            _pageSlideshowTimer.Tick += PageSlideshowTimer_Tick;
 
             ShowDashboard();
 
@@ -217,7 +221,6 @@ namespace MonitoringApp.Pages
                 };
             }
         }
-
 
         private async Task UpdateDetailDataAsync()
         {
@@ -396,64 +399,70 @@ namespace MonitoringApp.Pages
                 GC.Collect();
             }
         }
-
         private async void DetailCard_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is MachineDetailViewModel clickedMachine)
             {
+                if (clickedMachine.IsExpanded) return;
 
-                if (!clickedMachine.IsExpanded)
+                // 🌟 KUNCI GEMBOK TRANSISI
+                _isTransitioningCard = true;
+
+                var currentPageList = _pages.FirstOrDefault(p => p.Contains(clickedMachine));
+
+                if (currentPageList != null)
                 {
-                    int clickedPageIndex = _pagedCollection.IndexOf(clickedMachine);
-
-                    if (clickedPageIndex != -1)
+                    bool isAnyOtherCardClosing = false;
+                    foreach (var machine in currentPageList)
                     {
-                        int tempSum = 0;
-                        int targetPagedIndex = 0;
-
-                        for (int i = 0; i <= clickedPageIndex; i++)
+                        if (machine != clickedMachine && machine.IsExpanded)
                         {
-                            int size = _pagedCollection[i].IsExpanded ? 4 : 1;
-                            if (tempSum + size > 4)
-                            {
-                                targetPagedIndex = i;
-                                tempSum = 0;
-                            }
-                            tempSum += size;
-                        }
-
-                        var targetMachineOnCurrentRow = _pagedCollection[targetPagedIndex];
-
-                        if (clickedMachine != targetMachineOnCurrentRow)
-                        {
-                            int globalCurrentIndex = _detailCollection.IndexOf(clickedMachine);
-                            int globalTargetIndex = _detailCollection.IndexOf(targetMachineOnCurrentRow);
-
-                            if (globalCurrentIndex != -1 && globalTargetIndex != -1)
-                            {
-                                _detailCollection.Move(globalCurrentIndex, globalTargetIndex);
-                                RefreshPageItems();
-                                await Task.Delay(400); // Tunggu kartu meluncur selesai
-                            }
+                            machine.AllowAnimation = true;
+                            machine.IsExpanded = false;
+                            isAnyOtherCardClosing = true;
+                            _ = Task.Delay(300).ContinueWith(t => machine.AllowAnimation = false);
                         }
                     }
 
-                    clickedMachine.AllowAnimation = true;
-                    clickedMachine.IsExpanded = true;                
-                    RefreshPageItems();
+                    if (isAnyOtherCardClosing)
+                    {
+                        await Task.Delay(300);
+                        RefreshPageItems();
+                    }
                 }
-                
-                else
-                {
-                    clickedMachine.AllowAnimation = true;
-                    clickedMachine.IsExpanded = false;               
-                    await Task.Delay(100);                   
-                    RefreshPageItems();
-                    clickedMachine.AllowAnimation = false;
-                }
+
+                await ProcessExpandCardAsync(clickedMachine);
+
+                // 🌟 BUKA KEMBALI GEMBOK
+                _isTransitioningCard = false;
             }
         }
+        private async void PageSlideshowTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_isAnimating || _detailCollection.Count == 0) return;
 
+            _isTransitioningCard = true;
+
+            CalculatePages();
+            int totalPages = _pages.Count > 0 ? _pages.Count : 1;
+
+            if (totalPages <= 1)
+            {
+                _currentPage = 1;
+                RefreshPageItems();
+                _isTransitioningCard = false;
+                return;
+            }
+
+            if (_currentPage >= totalPages) _currentPage = 1;
+            else _currentPage++;
+
+            DisableAllAnimations();
+            await AnimateSlide(-2000, -2000);
+
+            _isTransitioningCard = false;
+        }
+        
         private void UpdatePortStatusUI(bool isActive)
         {
             Dispatcher.Invoke(() => {
@@ -473,7 +482,6 @@ namespace MonitoringApp.Pages
                 }
             });
         }
-
         private async Task AnimateSlide(double slideOutTargetX, double slideInStartX)
         {
             if (_isAnimating) return;
@@ -487,13 +495,10 @@ namespace MonitoringApp.Pages
             PageSlideTransform.BeginAnimation(TranslateTransform.XProperty, slideOut);
             await Task.Delay(300);
 
-            // 2. Ganti Data saat Card sedang di luar layar
             RefreshPageItems();
 
-            // 3. Pindahkan posisi mulai ke ujung layar sebaliknya
             PageSlideTransform.X = slideInStartX;
 
-            // 4. Animasi masuk kembali ke tengah layar (X = 0)
             var slideIn = new System.Windows.Media.Animation.DoubleAnimation(
                 0, TimeSpan.FromMilliseconds(300))
             { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } };
@@ -505,14 +510,11 @@ namespace MonitoringApp.Pages
         }
         private void DisableAllAnimations()
         {
-            // MATIKAN IZIN ANIMASI agar saat kembali ke halaman ini, WPF menampilkan ukuran 1200px secara instan.
-            // KITA TIDAK MENGUBAH IsExpanded = false, agar status mekarnya tetap terjaga!
             foreach (var machine in _detailCollection)
             {
                 machine.AllowAnimation = false;
             }
         }
-
         private async void BtnNextPage_Click(object sender, RoutedEventArgs e)
         {
             // Gunakan jumlah halaman dinamis dari hasil kalkulasi
@@ -525,7 +527,6 @@ namespace MonitoringApp.Pages
             _currentPage++;
             await AnimateSlide(-2000, 2000); // Slide ke kiri, masuk dari kanan
         }
-
         private async void BtnPrevPage_Click(object sender, RoutedEventArgs e)
         {
             if (_currentPage <= 1 || _isAnimating) return;
@@ -535,53 +536,28 @@ namespace MonitoringApp.Pages
             _currentPage--;
             await AnimateSlide(2000, -2000); // Slide ke kanan, masuk dari kiri
         }
-
-        private void ToggleSlideshow_Click(object sender, RoutedEventArgs e)
+        private void TogglePageSlideshow_Click(object sender, RoutedEventArgs e)
         {
-            if (ToggleSlideshow.IsChecked == true)
+            if (TogglePageSlideshow.IsChecked == true)
             {
-                ToggleSlideshow.Content = "⏸ Pause Auto Play";
-                ToggleSlideshow.Background = new SolidColorBrush(Color.FromRgb(198, 40, 40)); // Warna merah
-                _slideshowTimer.Start();
+                TogglePageSlideshow.Content = "⏸ Pause Page Play";
+                TogglePageSlideshow.Background = new SolidColorBrush(Color.FromRgb(198, 40, 40)); // Merah
+                _pageSlideshowTimer.Start();
             }
             else
             {
-                ToggleSlideshow.Content = "▶ Auto Play";
-                ToggleSlideshow.Background = new SolidColorBrush(Color.FromRgb(46, 125, 50)); // Warna hijau
-                _slideshowTimer.Stop();
+                TogglePageSlideshow.Content = "▶ Page Auto Play";
+                TogglePageSlideshow.Background = new SolidColorBrush(Color.FromRgb(46, 125, 50)); // Hijau
+                _pageSlideshowTimer.Stop();
             }
-        }
-
-        private async void SlideshowTimer_Tick(object? sender, EventArgs e)
-        {
-            // 1. WAJIB: Hitung ulang jumlah halaman terbaru (antisipasi jika ada kartu dihapus)
-            CalculatePages();
-            int totalPages = _pages.Count > 0 ? _pages.Count : 1;
-
-            // 2. CEGAH BUG: Jika kartu yang tersisa hanya muat di 1 halaman, BATALKAN animasi geser
-            if (totalPages <= 1)
-            {
-                _currentPage = 1;
-                RefreshPageItems(); // Tetap sinkronkan data tanpa animasi
-                return;
-            }
-
-            // 3. Logika siklus Auto Play normal
-            if (_currentPage >= totalPages)
-                _currentPage = 1;
-            else
-                _currentPage++;
-
-            DisableAllAnimations();
-
-            await AnimateSlide(-2000, 2000);
         }
 
         private void CalculatePages()
         {
             _pages.Clear();
-            // Salin data ke list sementara untuk diproses (Packing)
             var remainingCards = _detailCollection.ToList();
+
+            // Kapasitas Grid UI kamu
             const int maxColsPerRow = 4;
             const int maxRowsPerPage = 2;
 
@@ -592,9 +568,14 @@ namespace MonitoringApp.Pages
                 for (int row = 0; row < maxRowsPerPage; row++)
                 {
                     int filledCols = 0;
+
+                    // Isi baris ini selama masih ada slot kosong
                     while (filledCols < maxColsPerRow)
                     {
                         int spaceLeft = maxColsPerRow - filledCols;
+
+                        // CARI: Kartu yang ukurannya muat di sisa slot baris ini.
+                        // Jika Expand = butuh 4 slot. Jika Normal = butuh 1 slot.
                         var fitCard = remainingCards.FirstOrDefault(c => (c.IsExpanded ? 4 : 1) <= spaceLeft);
 
                         if (fitCard != null)
@@ -605,6 +586,7 @@ namespace MonitoringApp.Pages
                         }
                         else
                         {
+                            // Jika tidak ada kartu yang muat di sisa baris ini (misal sisa 3 slot, tapi kartu selanjutnya butuh 4)
                             break;
                         }
                     }
@@ -626,7 +608,21 @@ namespace MonitoringApp.Pages
 
             var targetPageItems = _pages.Count > 0 ? _pages[_currentPage - 1] : new List<MachineDetailViewModel>();
 
-            // SMART SYNC: Geser index agar FluidMoveBehavior WPF bisa menganimasi pergerakan ke kanan/bawah
+            // Jika "Expand All" mati, sistem tetap mewajibkan minimal 1 kartu terbuka (Kartu pertama)
+            if (!_isTransitioningCard && !_isAllExpanded && targetPageItems.Count > 0 && !targetPageItems.Any(m => m.IsExpanded))
+            {
+                targetPageItems[0].AllowAnimation = false;
+                targetPageItems[0].IsExpanded = true;
+            }
+
+            // 🌟 PERBAIKAN: Hanya paksa Expand jika sistem TIDAK SEDANG DALAM TRANSISI
+            if (!_isTransitioningCard && targetPageItems.Count > 0 && !targetPageItems.Any(m => m.IsExpanded))
+            {
+                targetPageItems[0].AllowAnimation = false;
+                targetPageItems[0].IsExpanded = true;
+            }
+
+            // Smart Sync Collection (Sama seperti sebelumnya)
             for (int i = 0; i < targetPageItems.Count; i++)
             {
                 if (i < _pagedCollection.Count)
@@ -634,14 +630,8 @@ namespace MonitoringApp.Pages
                     if (_pagedCollection[i] != targetPageItems[i])
                     {
                         int oldIndex = _pagedCollection.IndexOf(targetPageItems[i]);
-                        if (oldIndex != -1)
-                        {
-                            _pagedCollection.Move(oldIndex, i); // Memicu animasi geser
-                        }
-                        else
-                        {
-                            _pagedCollection.Insert(i, targetPageItems[i]); // Memicu animasi masuk dari kiri/bawah
-                        }
+                        if (oldIndex != -1) _pagedCollection.Move(oldIndex, i);
+                        else _pagedCollection.Insert(i, targetPageItems[i]);
                     }
                 }
                 else
@@ -650,11 +640,52 @@ namespace MonitoringApp.Pages
                 }
             }
 
-            // Buang item sisa (yang tumpah ke page selanjutnya)
             while (_pagedCollection.Count > targetPageItems.Count)
             {
                 _pagedCollection.RemoveAt(_pagedCollection.Count - 1);
             }
+        }
+        private async Task ProcessExpandCardAsync(MachineDetailViewModel targetMachine)
+        {
+            int globalCurrentIndex = _detailCollection.IndexOf(targetMachine);
+
+            if (globalCurrentIndex != -1)
+            {
+                // Karena 1 halaman pasti 5 kartu, awal baris/page adalah kelipatan 5
+                int pageStartIndex = (globalCurrentIndex / 5) * 5;
+
+                if (globalCurrentIndex != pageStartIndex)
+                {
+                    // Pindahkan ke posisi pertama di halamannya
+                    _detailCollection.Move(globalCurrentIndex, pageStartIndex);
+                    RefreshPageItems();
+                    await Task.Delay(350);
+                }
+            }
+
+            targetMachine.AllowAnimation = true;
+            targetMachine.IsExpanded = true;
+            RefreshPageItems();
+        }
+        private void BtnExpandAll_Click(object sender, RoutedEventArgs e)
+        {
+            // Toggle status
+            _isAllExpanded = !_isAllExpanded;
+
+            // Update semua kartu di koleksi utama
+            foreach (var machine in _detailCollection)
+            {
+                machine.AllowAnimation = true;
+                machine.IsExpanded = _isAllExpanded;
+            }
+
+            // Ubah tampilan tombol
+            BtnExpandAll.Content = _isAllExpanded ? "curtail Collapse All" : "↔ Expand All";
+            BtnExpandAll.Background = _isAllExpanded ?
+                new SolidColorBrush(Color.FromRgb(211, 47, 47)) : // Merah saat Collapse
+                new SolidColorBrush(Color.FromRgb(69, 90, 100));  // Gray-Blue saat Expand
+
+            RefreshPageItems();
         }
         private void AppHeader_Loaded(object sender, RoutedEventArgs e)
         {

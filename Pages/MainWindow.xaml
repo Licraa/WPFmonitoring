@@ -1117,23 +1117,41 @@
                                      HorizontalAlignment="Right" 
                                      VerticalAlignment="Center" 
                                      Margin="0,-100,60,0">
-                            <ToggleButton x:Name="ToggleSlideshow" 
-                                           Content="▶ Auto Play" 
-                                           Margin="0,0,0,30" 
-                                           Padding="10,15" 
-                                           Width="100"
-                                           Background="#2E7D32" 
-                                           Foreground="White" 
-                                           FontWeight="Bold" 
-                                           Cursor="Hand" 
-                                           Click="ToggleSlideshow_Click" 
-                                           BorderThickness="0">
+                            <ToggleButton x:Name="TogglePageSlideshow" 
+              Content="▶ Page Auto Play" 
+              Margin="0,0,0,15" 
+              Padding="10,15" 
+              Width="140"
+              Background="#2E7D32" 
+              Foreground="White" 
+              FontWeight="Bold" 
+              Cursor="Hand" 
+              Click="TogglePageSlideshow_Click" 
+              BorderThickness="0">
                                 <ToggleButton.Resources>
                                     <Style TargetType="Border">
                                         <Setter Property="CornerRadius" Value="10"/>
                                     </Style>
                                 </ToggleButton.Resources>
                             </ToggleButton>
+
+                            <Button x:Name="BtnExpandAll" 
+                                    Content="↔ Expand All" 
+                                    Margin="0,0,0,30" 
+                                    Padding="10,15" 
+                                    Width="140"
+                                    Background="#455A64" 
+                                    Foreground="White" 
+                                    FontWeight="Bold" 
+                                    Cursor="Hand" 
+                                    Click="BtnExpandAll_Click" 
+                                    BorderThickness="0">            
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="10"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
                             <Button Content="▲ PREV" 
                                      Width="100" 
                                      Padding="5,15" 

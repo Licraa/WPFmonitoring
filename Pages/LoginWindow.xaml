@@ -142,7 +142,12 @@
                             <TextBlock Text="Realtime Production" FontSize="11" Foreground="#D1E8FF" HorizontalAlignment="Center"/>
                             <TextBlock Text="Efficiency Tracking" FontSize="11" Foreground="#D1E8FF" HorizontalAlignment="Center" Margin="0,3,0,0"/>
                         </StackPanel>
+
                     </Border>
+                    
+                    <StackPanel VerticalAlignment="Bottom">
+                        <TextBlock Text="v9.0.0 Stable" Foreground="#D1E8FF" FontSize="10" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                    </StackPanel>
 
                     <Grid Grid.Column="1">
                         <Button Style="{StaticResource CloseButton}" 
@@ -186,12 +191,12 @@
 
                                     <Button Grid.Column="2" Background="Transparent" BorderThickness="0" Cursor="Hand" Click="BtnEye_Click">
                                         <TextBlock x:Name="txtEyeIcon" 
-                           Text="&#xE7B3;" 
-                           FontFamily="Segoe MDL2 Assets" 
-                           FontSize="16" 
-                           Foreground="#A0AEC0"
-                           VerticalAlignment="Center" 
-                           HorizontalAlignment="Center"/>
+                                                   Text="&#xE7B3;" 
+                                                   FontFamily="Segoe MDL2 Assets" 
+                                                   FontSize="16" 
+                                                   Foreground="#A0AEC0"
+                                                   VerticalAlignment="Center" 
+                                                   HorizontalAlignment="Center"/>
                                     </Button>
                                 </Grid>
                             </Border>
