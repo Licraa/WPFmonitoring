@@ -323,11 +323,11 @@
 
                 <Grid Grid.Row="1" ClipToBounds="True">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="0"/>
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="1" Background="Transparent">
+                    <Grid Grid.Row="0" Background="Transparent">
                         <Grid.RenderTransform>
                             <TranslateTransform x:Name="PageSlideTransform" X="0"/>
                         </Grid.RenderTransform>
@@ -580,9 +580,8 @@
                                                                 <Condition Binding="{Binding IsExpanded}" Value="True"/>
                                                                 <Condition Binding="{Binding AllowAnimation}" Value="False"/>
                                                             </MultiDataTrigger.Conditions>
-                                                            <Setter Property="Width" Value="1200"/>
+                                                            <Setter Property="Width" Value="{Binding ActualWidth, ElementName=mesinListView}"/>
                                                             <Setter Property="Opacity" Value="1"/>
-                                                            <Setter Property="Margin" Value="15,0,15,0"/>
                                                         </MultiDataTrigger>
 
                                                         <MultiDataTrigger>
@@ -590,12 +589,11 @@
                                                                 <Condition Binding="{Binding IsExpanded}" Value="True"/>
                                                                 <Condition Binding="{Binding AllowAnimation}" Value="True"/>
                                                             </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Width" Value="{Binding ActualWidth, ElementName=mesinListView}"/>
                                                             <MultiDataTrigger.EnterActions>
                                                                 <BeginStoryboard Name="AnimOpen">
                                                                     <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetProperty="Width" To="1200" Duration="0:0:0.35" DecelerationRatio="0.8"/>
                                                                         <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3"/>
-                                                                        <ThicknessAnimation Storyboard.TargetProperty="Margin" To="15,0,15,0" Duration="0:0:0.35" DecelerationRatio="0.8"/>
                                                                     </Storyboard>
                                                                 </BeginStoryboard>
                                                             </MultiDataTrigger.EnterActions>
@@ -614,7 +612,6 @@
                                                                     <Storyboard>
                                                                         <DoubleAnimation Storyboard.TargetProperty="Width" To="0" Duration="0:0:0.25" AccelerationRatio="0.8"/>
                                                                         <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2"/>
-                                                                        <ThicknessAnimation Storyboard.TargetProperty="Margin" To="0" Duration="0:0:0.25"/>
                                                                     </Storyboard>
                                                                 </BeginStoryboard>
                                                             </MultiDataTrigger.EnterActions>
@@ -1101,9 +1098,7 @@
                                             <DataTrigger.EnterActions>
                                                 <BeginStoryboard>
                                                     <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetName="FlashOverlay" 
-                                         Storyboard.TargetProperty="Opacity"
-                                         From="0.8" To="0.0" Duration="0:0:0.8"/>
+                                                        <DoubleAnimation Storyboard.TargetName="FlashOverlay" Storyboard.TargetProperty="Opacity" From="0.8" To="0.0" Duration="0:0:0.8"/>
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </DataTrigger.EnterActions>
@@ -1112,93 +1107,68 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <StackPanel Grid.Column="1" 
-                                     Orientation="Vertical" 
-                                     HorizontalAlignment="Right" 
-                                     VerticalAlignment="Center" 
-                                     Margin="0,-100,60,0">
-                            <ToggleButton x:Name="TogglePageSlideshow" 
-              Content="▶ Page Auto Play" 
-              Margin="0,0,0,15" 
-              Padding="10,15" 
-              Width="140"
-              Background="#2E7D32" 
-              Foreground="White" 
-              FontWeight="Bold" 
-              Cursor="Hand" 
-              Click="TogglePageSlideshow_Click" 
-              BorderThickness="0">
-                                <ToggleButton.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="10"/>
-                                    </Style>
-                                </ToggleButton.Resources>
-                            </ToggleButton>
-
-                            <Button x:Name="BtnExpandAll" 
-                                    Content="↔ Expand All" 
-                                    Margin="0,0,0,30" 
-                                    Padding="10,15" 
-                                    Width="140"
-                                    Background="#455A64" 
-                                    Foreground="White" 
-                                    FontWeight="Bold" 
-                                    Cursor="Hand" 
-                                    Click="BtnExpandAll_Click" 
-                                    BorderThickness="0">            
-                                <Button.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="10"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
-                            <Button Content="▲ PREV" 
-                                     Width="100" 
-                                     Padding="5,15" 
-                                     Background="#005B8E" 
-                                     Foreground="White" 
-                                     FontWeight="Bold" 
-                                     Cursor="Hand" 
-                                     Click="BtnPrevPage_Click" 
-                                     BorderThickness="0">
-                                <Button.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="10,10,0,0"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
-                            <Border Background="White" 
-                                     BorderBrush="#CCCCCC" 
-                                     BorderThickness="1,0,1,0" 
-                                     Width="100" 
-                                     Padding="5,20">
-                                <StackPanel>
-                                    <TextBlock Text="PAGE" FontSize="10" Foreground="#888" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="PageIndicatorText" 
-                                                Text="1 / 1" 
-                                                FontSize="16" 
-                                                FontWeight="Bold" 
-                                                Foreground="#333" 
-                                                HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
-                            <Button Content="NEXT ▼" 
-                                     Width="100" 
-                                     Padding="5,15" 
-                                     Background="#005B8E" 
-                                     Foreground="White" 
-                                     FontWeight="Bold" 
-                                     Cursor="Hand" 
-                                     Click="BtnNextPage_Click" 
-                                     BorderThickness="0">
-                                <Button.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="0,0,10,10"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
-                        </StackPanel>
                     </Grid>
+                    <StackPanel Grid.Column="1" 
+                Orientation="Vertical" 
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Center" 
+                Margin="0,-150,38,0">
+
+                        <ToggleButton x:Name="TogglePageSlideshow" 
+                      Content="▶ Page Auto Play" 
+                      Margin="0,0,0,15" 
+                      Padding="10,15" Width="140"
+                      Background="#2E7D32" Foreground="White" 
+                      FontWeight="Bold" Cursor="Hand" 
+                      Click="TogglePageSlideshow_Click" BorderThickness="0">
+                            <ToggleButton.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="10"/>
+                                </Style>
+                            </ToggleButton.Resources>
+                        </ToggleButton>
+
+                        <Button x:Name="BtnExpandAll" 
+                Content="↔ Expand All" 
+                Margin="0,0,0,30" 
+                Padding="10,15" Width="140"
+                Background="#455A64" Foreground="White" 
+                FontWeight="Bold" Cursor="Hand" 
+                Click="BtnExpandAll_Click" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="10"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button Content="▲ PREV" Width="100" Padding="5,15" 
+                Background="#005B8E" Foreground="White" FontWeight="Bold" 
+                Cursor="Hand" Click="BtnPrevPage_Click" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="10,10,0,0"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Border Background="White" BorderBrush="#CCCCCC" BorderThickness="1,0,1,0" Width="100" Padding="5,20">
+                            <StackPanel>
+                                <TextBlock Text="PAGE" FontSize="10" Foreground="#888" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="PageIndicatorText" Text="1 / 1" FontSize="16" FontWeight="Bold" Foreground="#333" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="NEXT ▼" Width="100" Padding="5,15" 
+                Background="#005B8E" Foreground="White" FontWeight="Bold" 
+                Cursor="Hand" Click="BtnNextPage_Click" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="0,0,10,10"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Grid>

@@ -18,7 +18,6 @@ namespace MonitoringApp.Pages
         {
             if (txtPassword.Visibility == Visibility.Visible)
             {
-                // Salin sandi ke kotak teks biasa
                 txtPasswordVisible.Text = txtPassword.Password;
                 txtPassword.Visibility = Visibility.Collapsed;
                 txtPasswordVisible.Visibility = Visibility.Visible;
@@ -26,7 +25,6 @@ namespace MonitoringApp.Pages
             }
             else
             {
-                // Kembalikan isi dari teks biasa ke kotak sandi
                 txtPassword.Password = txtPasswordVisible.Text;
                 txtPasswordVisible.Visibility = Visibility.Collapsed;
                 txtPassword.Visibility = Visibility.Visible;
@@ -39,7 +37,6 @@ namespace MonitoringApp.Pages
             string username = txtUsername.Text;
             string password = txtPassword.Visibility == Visibility.Visible ? txtPassword.Password : txtPasswordVisible.Text;
 
-            // ⚠️ RAWAN ERROR: Pastikan AuthService kamu menangani error dengan aman
             string? role = _authService.Login(username, password);
 
             if (role != null)
@@ -63,10 +60,8 @@ namespace MonitoringApp.Pages
 
         private void BtnCloseAlert_Click(object sender, RoutedEventArgs e)
         {
-            // Sembunyikan kembali pelayannya
             OverlayAlert.Visibility = Visibility.Collapsed;
 
-            // BEST PRACTICE UX & SECURITY: Bersihkan password yang salah, lalu kembalikan kursor ke Username
             txtPassword.Password = "";
             txtPasswordVisible.Text = "";
             txtUsername.Focus();
@@ -82,10 +77,8 @@ namespace MonitoringApp.Pages
         {
             if (e.Key == System.Windows.Input.Key.Enter)
             {
-                // Jika kosong, biarkan saja (jangan pindah)
                 if (string.IsNullOrWhiteSpace(txtUsername.Text)) return;
 
-                // LANGSUNG PINDAH KE PASSWORD APAPUN YANG TERJADI (Trik mengelabui Hacker)
                 if (txtPassword.Visibility == Visibility.Visible)
                 {
                     txtPassword.Focus();
@@ -98,20 +91,17 @@ namespace MonitoringApp.Pages
             }
         }
 
-        // Satpam Pos 2: Mencegat Enter di kotak Password
         private void TxtPassword_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == System.Windows.Input.Key.Enter)
             {
-                ProsesLogin(); // Tidak ada lagi pemaksaan (null, null) yang dibenci C#
+                ProsesLogin();
             }
         }
         private void BtnOkAlert_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            // Jika Popup sedang terbuka dan user menekan Enter
             if (e.Key == System.Windows.Input.Key.Enter)
             {
-                // Panggil fungsi klik tombol OK secara manual!
                 BtnCloseAlert_Click(sender, e);
             }
         }

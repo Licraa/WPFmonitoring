@@ -61,7 +61,6 @@ namespace MonitoringApp.Pages
                 ToggleFullScreen();
             }
         }
-
         private void ToggleFullScreen()
         {
             if (!_isFullScreen)
@@ -93,7 +92,6 @@ namespace MonitoringApp.Pages
                 _isFullScreen = false;
             }
         }
-
         // Constructor Berubah: Terima Factory, bukan Service langsung
         public MainWindow(string role, IServiceScopeFactory scopeFactory, CsvLogService csvService, SerialPortService serialService)
         {
@@ -132,7 +130,6 @@ namespace MonitoringApp.Pages
                     adminItem.Visibility = Visibility.Collapsed;
             }
         }
-
         private async void RefreshTimer_Tick(object? sender, EventArgs e)
         {
             if (_isUpdating) return;
@@ -172,8 +169,6 @@ namespace MonitoringApp.Pages
                 }
             }
         }
-
-        // --- REVISI: UPDATE DASHBOARD DENGAN SCOPE BARU ---
         private async Task UpdateDashboardDataAsync()
         {
             using (var scope = _scopeFactory.CreateScope())
@@ -221,7 +216,6 @@ namespace MonitoringApp.Pages
                 };
             }
         }
-
         private async Task UpdateDetailDataAsync()
         {
             if (_selectedLine == null) return;
@@ -285,7 +279,6 @@ namespace MonitoringApp.Pages
                 RefreshPageItems();
             }
         }
-
         private void UpdateShiftData(ShiftSummaryViewModel target, ShiftSummaryViewModel source)
         {
             if (target == null || source == null) return;
@@ -295,7 +288,6 @@ namespace MonitoringApp.Pages
             target.DowntimePercent = source.DowntimePercent;
             target.UptimePercent = source.UptimePercent;
         }
-
         private async void ShowDashboard()
         {
             DashboardPanel.Visibility = Visibility.Visible;
@@ -303,7 +295,6 @@ namespace MonitoringApp.Pages
             _selectedLine = null;
             await UpdateDashboardDataAsync();
         }
-
         private async void ShowDetail(string lineProduction)
         {
             DashboardPanel.Visibility = Visibility.Collapsed;
@@ -312,15 +303,12 @@ namespace MonitoringApp.Pages
             _selectedLine = lineProduction;
             await UpdateDetailDataAsync();
         }
-
         private void Card_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is Border border && border.DataContext is LineSummary summary)
                 ShowDetail(summary.lineProduction);
         }
-
         private void BackButton_Click(object sender, RoutedEventArgs e) => ShowDashboard();
-
         private void BtnHamburger_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.ContextMenu != null)
@@ -330,7 +318,6 @@ namespace MonitoringApp.Pages
                 btn.ContextMenu.IsOpen = true;
             }
         }
-
         private void BtnOpenAdmin_Click(object sender, RoutedEventArgs e)
         {
             var existingWindow = Application.Current.Windows.OfType<AdminWindow>().FirstOrDefault();
@@ -352,7 +339,6 @@ namespace MonitoringApp.Pages
                 admin.Show();
             }
         }
-
         private void BtnDownloadExcel_Click(object sender, RoutedEventArgs e)
         {
             // 1. Cari apakah jendela ReportHistoryWindow sudah terbuka
@@ -377,7 +363,6 @@ namespace MonitoringApp.Pages
                 history.Show();
             }
         }
-
         private void BtnLogout_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show("Are you sure you want to logout?", "Confirm Logout",
@@ -458,11 +443,10 @@ namespace MonitoringApp.Pages
             else _currentPage++;
 
             DisableAllAnimations();
-            await AnimateSlide(-2000, -2000);
+            await AnimateFadeAsync();
 
             _isTransitioningCard = false;
-        }
-        
+        }    
         private void UpdatePortStatusUI(bool isActive)
         {
             Dispatcher.Invoke(() => {
@@ -482,29 +466,43 @@ namespace MonitoringApp.Pages
                 }
             });
         }
-        private async Task AnimateSlide(double slideOutTargetX, double slideInStartX)
+        private async Task AnimateFadeAsync()
         {
             if (_isAnimating) return;
             _isAnimating = true;
 
-            // 1. Animasi keluar layar
-            var slideOut = new System.Windows.Media.Animation.DoubleAnimation(
-                slideOutTargetX, TimeSpan.FromMilliseconds(300))
-            { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn } };
+            // Durasi yang nyaman: 400ms (tidak terlalu cepat, tidak terlalu lambat)
+            TimeSpan duration = TimeSpan.FromMilliseconds(400);
 
-            PageSlideTransform.BeginAnimation(TranslateTransform.XProperty, slideOut);
-            await Task.Delay(300);
+            // Easing Function agar transisi terasa natural (tidak kaku)
+            var easing = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            };
 
+            // 1. Fase Keluar: Fade Out & Sedikit Turun
+            var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.0, duration) { EasingFunction = easing };
+            var moveDown = new System.Windows.Media.Animation.DoubleAnimation(0, 20, duration) { EasingFunction = easing };
+
+            mesinListView.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+            PageSlideTransform.BeginAnimation(TranslateTransform.YProperty, moveDown);
+
+            await Task.Delay(duration);
+
+            // 2. Ganti Data
             RefreshPageItems();
 
-            PageSlideTransform.X = slideInStartX;
+            // Siapkan posisi awal untuk halaman baru (muncul dari atas sedikit)
+            PageSlideTransform.Y = -20;
 
-            var slideIn = new System.Windows.Media.Animation.DoubleAnimation(
-                0, TimeSpan.FromMilliseconds(300))
-            { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } };
+            // 3. Fase Masuk: Fade In & Settle ke Tengah
+            var fadeIn = new System.Windows.Media.Animation.DoubleAnimation(0.0, 1.0, duration) { EasingFunction = easing };
+            var moveReset = new System.Windows.Media.Animation.DoubleAnimation(-20, 0, duration) { EasingFunction = easing };
 
-            PageSlideTransform.BeginAnimation(TranslateTransform.XProperty, slideIn);
-            await Task.Delay(300);
+            mesinListView.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            PageSlideTransform.BeginAnimation(TranslateTransform.YProperty, moveReset);
+
+            await Task.Delay(duration);
 
             _isAnimating = false;
         }
@@ -525,7 +523,7 @@ namespace MonitoringApp.Pages
             DisableAllAnimations();
 
             _currentPage++;
-            await AnimateSlide(-2000, 2000); // Slide ke kiri, masuk dari kanan
+            await AnimateFadeAsync();
         }
         private async void BtnPrevPage_Click(object sender, RoutedEventArgs e)
         {
@@ -534,7 +532,7 @@ namespace MonitoringApp.Pages
             DisableAllAnimations();
 
             _currentPage--;
-            await AnimateSlide(2000, -2000); // Slide ke kanan, masuk dari kiri
+            await AnimateFadeAsync();
         }
         private void TogglePageSlideshow_Click(object sender, RoutedEventArgs e)
         {
@@ -551,7 +549,6 @@ namespace MonitoringApp.Pages
                 _pageSlideshowTimer.Stop();
             }
         }
-
         private void CalculatePages()
         {
             _pages.Clear();
@@ -595,7 +592,6 @@ namespace MonitoringApp.Pages
                 _pages.Add(currentPageItems);
             }
         }
-
         private void RefreshPageItems()
         {
             CalculatePages();
