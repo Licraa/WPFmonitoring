@@ -22,32 +22,25 @@ namespace MonitoringApp.Pages
         private readonly CsvLogService _csvService;
         private readonly string _userRole;
         private readonly SerialPortService _serialService;
-
         private string? _selectedLine;
         private DispatcherTimer _refreshTimer;
         private bool _isUpdating = false;
-
         private ObservableCollection<LineSummary> _dashboardCollection = new ObservableCollection<LineSummary>();
         private ObservableCollection<MachineDetailViewModel> _detailCollection = new ObservableCollection<MachineDetailViewModel>();
-
         private bool _isFullScreen = false;
         private WindowState _previousWindowState;
         private WindowStyle _previousWindowStyle;
         private ResizeMode _previousResizeMode;
-
         private bool _lastPortState = false;
-
         private ObservableCollection<MachineDetailViewModel> _pagedCollection = new ObservableCollection<MachineDetailViewModel>();
         private int _currentPage = 1;
-
+        private SummaryPanelVM _dashboardSummary = new SummaryPanelVM();
+        private SummaryPanelVM _detailSummary = new SummaryPanelVM();
         private bool _isAnimating = false; 
         private bool _isTransitioningCard = false;
         private DispatcherTimer _pageSlideshowTimer;
-
         private bool _isAllExpanded = false;
-
         private List<List<MachineDetailViewModel>> _pages = new List<List<MachineDetailViewModel>>();
-
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             // Jika tombol F11 ditekan, toggle (masuk/keluar) full screen
@@ -92,10 +85,12 @@ namespace MonitoringApp.Pages
                 _isFullScreen = false;
             }
         }
-        // Constructor Berubah: Terima Factory, bukan Service langsung
         public MainWindow(string role, IServiceScopeFactory scopeFactory, CsvLogService csvService, SerialPortService serialService)
         {
             InitializeComponent();
+
+            DashboardPanel.DataContext = _dashboardSummary;
+            DetailPanel.DataContext = _detailSummary;
 
             _userRole = role;
             _scopeFactory = scopeFactory; // Simpan Factory
@@ -113,7 +108,7 @@ namespace MonitoringApp.Pages
 
             // Timer untuk Page (10 Detik)
             _pageSlideshowTimer = new DispatcherTimer();
-            _pageSlideshowTimer.Interval = TimeSpan.FromSeconds(10);
+            _pageSlideshowTimer.Interval = TimeSpan.FromSeconds(15);
             _pageSlideshowTimer.Tick += PageSlideshowTimer_Tick;
 
             ShowDashboard();
@@ -207,13 +202,9 @@ namespace MonitoringApp.Pages
                     .ToList();
                 foreach (var item in itemsToRemove) _dashboardCollection.Remove(item);
 
-                // Update DataContext untuk Header
-                DashboardPanel.DataContext = new
-                {
-                    TotalMachine = _dashboardCollection.Sum(s => s.TotalMachine),
-                    Active = _dashboardCollection.Sum(s => s.Active),
-                    Inactive = _dashboardCollection.Sum(s => s.Inactive)
-                };
+                _dashboardSummary.TotalMachine = _dashboardCollection.Sum(s => s.TotalMachine);
+                _dashboardSummary.Active = _dashboardCollection.Sum(s => s.Active);
+                _dashboardSummary.Inactive = _dashboardCollection.Sum(s => s.Inactive);
             }
         }
         private async Task UpdateDetailDataAsync()
@@ -275,7 +266,10 @@ namespace MonitoringApp.Pages
                     if (m.NilaiA0 == 1) active++; else inactive++;
                 }
 
-                DetailPanel.DataContext = new { Active = active, Inactive = inactive, TotalMachine = _detailCollection.Count, Line = _selectedLine };
+                _detailSummary.Active = active;
+                _detailSummary.Inactive = inactive;
+                _detailSummary.TotalMachine = _detailCollection.Count;
+                _detailSummary.Line = _selectedLine ?? string.Empty;
                 RefreshPageItems();
             }
         }
@@ -471,18 +465,18 @@ namespace MonitoringApp.Pages
             if (_isAnimating) return;
             _isAnimating = true;
 
-            // Durasi yang nyaman: 400ms (tidak terlalu cepat, tidak terlalu lambat)
             TimeSpan duration = TimeSpan.FromMilliseconds(400);
 
-            // Easing Function agar transisi terasa natural (tidak kaku)
-            var easing = new System.Windows.Media.Animation.CubicEase
-            {
-                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
-            };
+            // 🌟 TAMBAHKAN .Freeze() DI SINI
+            var easing = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+            easing.Freeze();
 
             // 1. Fase Keluar: Fade Out & Sedikit Turun
             var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.0, duration) { EasingFunction = easing };
+            fadeOut.Freeze(); // 🌟 TAMBAHKAN .Freeze()
+
             var moveDown = new System.Windows.Media.Animation.DoubleAnimation(0, 20, duration) { EasingFunction = easing };
+            moveDown.Freeze(); // 🌟 TAMBAHKAN .Freeze()
 
             mesinListView.BeginAnimation(UIElement.OpacityProperty, fadeOut);
             PageSlideTransform.BeginAnimation(TranslateTransform.YProperty, moveDown);
@@ -491,13 +485,14 @@ namespace MonitoringApp.Pages
 
             // 2. Ganti Data
             RefreshPageItems();
-
-            // Siapkan posisi awal untuk halaman baru (muncul dari atas sedikit)
             PageSlideTransform.Y = -20;
 
             // 3. Fase Masuk: Fade In & Settle ke Tengah
             var fadeIn = new System.Windows.Media.Animation.DoubleAnimation(0.0, 1.0, duration) { EasingFunction = easing };
+            fadeIn.Freeze(); // 🌟 TAMBAHKAN .Freeze()
+
             var moveReset = new System.Windows.Media.Animation.DoubleAnimation(-20, 0, duration) { EasingFunction = easing };
+            moveReset.Freeze(); // 🌟 TAMBAHKAN .Freeze()
 
             mesinListView.BeginAnimation(UIElement.OpacityProperty, fadeIn);
             PageSlideTransform.BeginAnimation(TranslateTransform.YProperty, moveReset);
@@ -687,5 +682,20 @@ namespace MonitoringApp.Pages
         {
 
         }
+    }
+
+    public class SummaryPanelVM : ViewModels.ViewModelBase
+    {
+        private int _totalMachine;
+        public int TotalMachine { get => _totalMachine; set => SetProperty(ref _totalMachine, value); }
+
+        private int _active;
+        public int Active { get => _active; set => SetProperty(ref _active, value); }
+
+        private int _inactive;
+        public int Inactive { get => _inactive; set => SetProperty(ref _inactive, value); }
+
+        private string _line = string.Empty;
+        public string Line { get => _line; set => SetProperty(ref _line, value); }
     }
 }

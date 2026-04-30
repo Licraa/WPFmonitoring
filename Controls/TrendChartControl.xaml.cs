@@ -42,16 +42,38 @@ namespace MonitoringApp.Controls
             get => (int)GetValue(TrendDaysProperty);
             set => SetValue(TrendDaysProperty, value);
         }
+        private bool _isLoaded = false;
 
         // ══════════════════════════════════════════════════════════════════
         //  CONSTRUCTOR
         // ══════════════════════════════════════════════════════════════════
-
         public TrendChartControl()
         {
+            _isLoaded = true;
             InitializeComponent();
-            Loaded += (_, _) => DrawChart();
+            Loaded += TrendChartControl_Loaded;
+            Unloaded += TrendChartControl_Unloaded;
             SizeChanged += (_, _) => DrawChart();
+        }
+        private void TrendChartControl_Loaded(object sender, RoutedEventArgs e)
+        {
+           
+            if (TrendData != null)
+            {
+                TrendData.CollectionChanged -= Data_CollectionChanged; 
+                TrendData.CollectionChanged += Data_CollectionChanged;
+            }
+            DrawChart();
+        }
+        private void TrendChartControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _isLoaded = false;
+            if (TrendData != null)
+            {
+                TrendData.CollectionChanged -= Data_CollectionChanged;
+            }
+
+            ChartCanvas.Children.Clear(); 
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -64,13 +86,14 @@ namespace MonitoringApp.Controls
             if (e.OldValue is ObservableCollection<DailyUptimePoint> oldCol)
                 oldCol.CollectionChanged -= ctrl.Data_CollectionChanged;
             if (e.NewValue is ObservableCollection<DailyUptimePoint> newCol)
+            {
+                newCol.CollectionChanged -= ctrl.Data_CollectionChanged;
                 newCol.CollectionChanged += ctrl.Data_CollectionChanged;
+            }
             ctrl.DrawChart();
         }
-
         private static void OnAnyPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
             => ((TrendChartControl)d).DrawChart();
-
         private void Data_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
             => Dispatcher.InvokeAsync(DrawChart);
 
@@ -80,6 +103,8 @@ namespace MonitoringApp.Controls
 
         private void DrawChart()
         {
+            if (!_isLoaded) return;
+
             ChartCanvas.Children.Clear();
             var allData = TrendData;
 
@@ -196,13 +221,15 @@ namespace MonitoringApp.Controls
                 };
 
                 // Glow Effect pada Bar
-                upBar.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                var barEffect = new System.Windows.Media.Effects.DropShadowEffect
                 {
                     BlurRadius = 10,
                     ShadowDepth = 0,
                     Opacity = 0.2,
                     Color = barColor
                 };
+                barEffect.Freeze(); 
+                upBar.Effect = barEffect;
 
                 ChartCanvas.Children.Add(upBar);
                 Canvas.SetLeft(upBar, cx - barW / 2);
@@ -266,13 +293,16 @@ namespace MonitoringApp.Controls
                     StrokeEndLineCap = PenLineCap.Round
                 };
 
-                smoothLine.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                var smoothLineEffect = new System.Windows.Media.Effects.DropShadowEffect
                 {
                     BlurRadius = 12,
                     ShadowDepth = 4,
                     Opacity = 0.25,
                     Color = Colors.DeepSkyBlue
                 };
+                smoothLineEffect.Freeze(); 
+                smoothLine.Effect = smoothLineEffect;
+
                 ChartCanvas.Children.Add(smoothLine);
             }
 

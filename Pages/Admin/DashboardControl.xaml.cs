@@ -44,27 +44,16 @@ namespace MonitoringApp.Pages
             // Setup ViewModel
             this.DataContext = new DashboardViewModel();
 
-            // Setup Timer (Tingkatkan ke 2 atau 3 detik agar lebih hemat RAM)
+            // Setup Timer 
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _timer.Tick += UpdateSystemStatus;
-
-            this.Loaded += (s, e) => { _timer.Start(); };
-            this.Unloaded += (s, e) => {
-                _timer.Stop();
-                _cpuCounter?.Dispose();
-                _ramCounter?.Dispose();
-                this.DataContext = null; // Bantu GC melepas ViewModel
-            }; 
-
-            // Setup Timer
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-            _timer.Tick += UpdateSystemStatus;
-
-            // Lifetime Management
-            this.Loaded += (s, e) => { UpdateSystemStatus(null, null); _timer.Start(); };
+            this.Loaded += (s, e) =>
+            {
+                UpdateSystemStatus(null, null);
+                _timer.Start();
+            };
             this.Unloaded += OnUnloaded;
         }
-
         private void UpdateSystemStatus(object? sender, EventArgs? e)
         {
             if (this.DataContext is not DashboardViewModel vm) return;
@@ -109,10 +98,21 @@ namespace MonitoringApp.Pages
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
-            _timer.Stop();
-            // Bersihkan memori counter agar tidak leak
-            _cpuCounter?.Dispose();
-            _ramCounter?.Dispose();
+            if (_timer != null)
+            {
+                _timer.Stop();
+            }
+            try
+            {
+                // Bersihkan memori counter agar tidak leak
+                _cpuCounter?.Dispose();
+                _ramCounter?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error disposing hardware counters: {ex.Message}");
+            }
+            this.DataContext = null;
         }
 
         private string FormatBytes(long bytes)

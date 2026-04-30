@@ -1096,12 +1096,19 @@
                                     <DataTemplate.Triggers>
                                         <DataTrigger Binding="{Binding IsJustUpdated}" Value="True">
                                             <DataTrigger.EnterActions>
-                                                <BeginStoryboard>
+                                                <BeginStoryboard Name="BlinkAnim">
                                                     <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetName="FlashOverlay" Storyboard.TargetProperty="Opacity" From="0.8" To="0.0" Duration="0:0:0.8"/>
+                                                        <DoubleAnimation Storyboard.TargetName="FlashOverlay" 
+                                                                         Storyboard.TargetProperty="Opacity" 
+                                                                         From="0.8" To="0.0" Duration="0:0:0.5"/>
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </DataTrigger.EnterActions>
+
+                                            <DataTrigger.ExitActions>
+                                                <RemoveStoryboard BeginStoryboardName="BlinkAnim"/>
+                                            </DataTrigger.ExitActions>
+
                                         </DataTrigger>
                                     </DataTemplate.Triggers>
                                 </DataTemplate>

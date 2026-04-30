@@ -52,10 +52,6 @@ namespace MonitoringApp.Services
             // Berlangganan data secara GLOBAL
             _serialService.DataReceived += OnDataReceived;
         }
-
-        /// <summary>
-        /// Method untuk memicu konversi Excel secara manual dari UI
-        /// </summary>
         public async Task ManualFinalize()
         {
             OnStatusMessage?.Invoke("[PROCESS] Menguras antrean data dan menyiapkan Excel...");
@@ -75,7 +71,6 @@ namespace MonitoringApp.Services
 
             OnStatusMessage?.Invoke("[SUCCESS] File Excel berhasil diperbarui di folder log.");
         }
-
         private void OnDataReceived(object? sender, SerialDataEventArgs e)
         {
             var lines = e.Text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
@@ -100,8 +95,13 @@ namespace MonitoringApp.Services
 
                             // 2. Masukkan ke antrean CSV
                             var info = machineService.GetMachineInfoCached(dbId);
+                            if (_csvBuffer.Count > 10000)
+                            {
+                                // Jika lebih dari 10.000 data mengantre, buang data paling lama agar RAM aman
+                                _csvBuffer.TryDequeue(out _);
+                                System.Diagnostics.Debug.WriteLine("[WARNING] CSV Buffer penuh, membuang data lama untuk mencegah memory leak!");
+                            }
                             _csvBuffer.Enqueue((result.IdKey, result.ParsedData, (info.MachineCode, info.Name, info.Line, info.Process)));
-
                             if (!_isCsvWorkerRunning) StartCsvWorker();
                         }
                     }
